@@ -1,0 +1,42 @@
+{
+    "visits": {
+        "youtube": {
+            "count": 7,
+            "total_sec": 33.99424934387207,
+            "last_seen": 1772889499.233089
+        },
+        "google": {
+            "count": 95,
+            "total_sec": 983.4465582370758,
+            "last_seen": 1772889755.540406
+        },
+        "telegram": {
+            "count": 6,
+            "total_sec": 13.994683504104614,
+            "last_seen": 1772829228.9925735
+        },
+        "whatsapp": {
+            "count": 7,
+            "total_sec": 45.99638271331787,
+            "last_seen": 1772832310.7845807
+        }
+    },
+    "daily": {
+        "2026-03-05": {
+            "youtube": 4,
+            "google": 15
+        },
+        "2026-03-06": {
+            "google": 74,
+            "telegram": 6,
+            "whatsapp": 7,
+            "youtube": 2
+        },
+        "2026-03-07": {
+            "google": 6,
+            "youtube": 1
+        }
+    },
+    "last_site": "",
+    "last_site_time": 0
+}

@@ -1,0 +1,66 @@
+{
+  "name": "Toty Classic",
+  "author": "Toty",
+  "description": "The original claymation green toy pet",
+
+  "body": {
+    "color": "#2EBA54",
+    "width": 60,
+    "height": 60,
+    "shading_steps": 40,
+    "specular_alpha": 80,
+    "rim_light": true
+  },
+
+  "limbs": {
+    "color": "#151515",
+    "highlight_alpha": 180,
+    "arm_w": 14,
+    "arm_h": 16,
+    "leg_w": 16,
+    "leg_h": 18
+  },
+
+  "face": {
+    "eye_color": "#000000",
+    "eye_w": 7,
+    "eye_h": 12,
+    "eye_spacing": 18,
+    "mouth_width": 16,
+    "blush_color": "#D47C7C",
+    "blush_alpha": 200,
+    "blush_size": 8
+  },
+
+  "effects": {
+    "shadow_alpha": 35,
+    "shadow_ao_alpha": 80,
+    "glow_alpha": 120,
+    "glow_blur": 8
+  },
+
+  "state_colors": {
+    "idle":          { "body": "#2EBA54" },
+    "walk":          { "body": "#2EBA54" },
+    "run":           { "body": "#2EBA54" },
+    "crawl":         { "body": "#2EBA54" },
+    "carry":         { "body": "#2EBA54" },
+    "work":          { "body": "#2EBA54" },
+    "happy":         { "body": "#2EBA54" },
+    "dance":         { "body": "#FFD700", "glow": "#FFEA70" },
+    "excited":       { "body": "#FF6347" },
+    "sad":           { "body": "#5F9EA0" },
+    "sleep":         { "body": "#2EBA54" },
+    "pray":          { "body": "#1A7A4C", "glow": "#A8E6CF" },
+    "music":         { "body": "#9B59B6" },
+    "screenshot":    { "body": "#00BCD4", "glow": "#E0F7FA" },
+    "notification":  { "body": "#FF9800", "glow": "#FFE0B2" },
+    "level_up":      { "body": "#FFD700", "glow": "#FFEA70" },
+    "startup":       { "body": "#4CAF50", "glow": "#C8E6C9" },
+    "shutdown":      { "body": "#5F9EA0" },
+    "restart":       { "body": "#2196F3", "glow": "#BBDEFB" },
+    "run_app":       { "body": "#3F51B5", "glow": "#C5CAE9" },
+    "yawn":          { "body": "#2EBA54" },
+    "stretch":       { "body": "#2EBA54" }
+  }
+}

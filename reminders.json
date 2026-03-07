@@ -1,0 +1,11 @@
+{
+  "reminders": [
+    {
+      "id": 1,
+      "text": "go to bathroom",
+      "fire_at_iso": "2026-03-07T17:21:46",
+      "fired": true
+    }
+  ],
+  "next_id": 2
+}

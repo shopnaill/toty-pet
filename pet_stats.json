@@ -1,0 +1,61 @@
+{
+    "current_streak": 3,
+    "longest_streak": 3,
+    "last_session_date": "2026-03-07",
+    "total_focus_min": 142,
+    "total_sessions": 37,
+    "daily_focus_min": 1,
+    "daily_date": "2026-03-07",
+    "notes": [
+        {
+            "text": "how is it going",
+            "time": "2026-03-05T04:40"
+        },
+        {
+            "text": "hi",
+            "time": "2026-03-05T04:41"
+        },
+        {
+            "text": "\u0645\u062a\u0627\u0628\u0639\u0629 gym engine",
+            "time": "2026-03-05T04:52"
+        }
+    ],
+    "xp": 450,
+    "level": 9,
+    "achievements": [
+        "first_pet",
+        "note_1",
+        "early_bird",
+        "combo_triple",
+        "pet_10",
+        "pet_50",
+        "level_5",
+        "keys_1000",
+        "night_owl",
+        "focus_30",
+        "pomodoro_1",
+        "daily_goal",
+        "focus_120",
+        "streak_3"
+    ],
+    "todo_items": [
+        {
+            "text": "breakfast",
+            "done": true,
+            "created": "2026-03-05T14:13"
+        },
+        {
+            "text": "coffe",
+            "done": true,
+            "created": "2026-03-05T14:14"
+        },
+        {
+            "text": "gym engine updates",
+            "done": true,
+            "created": "2026-03-05T14:14"
+        }
+    ],
+    "total_pomodoros": 2,
+    "total_pets": 298,
+    "total_keys": 11810
+}

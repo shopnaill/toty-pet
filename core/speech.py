@@ -1,0 +1,313 @@
+SPEECH_POOL = {
+    "typing_fast": [
+        "Whoa, your fingers are flying!",
+        "Speed demon mode activated!",
+        "You're on fire right now!",
+        "Keep that momentum going!",
+    ],
+    "burst": [
+        "That was a BURST of energy!",
+        "Rapid fire! You're in the zone!",
+        "Blazing fast typing detected!",
+    ],
+    "backspace_rage": [
+        "Debugging? I feel the frustration...",
+        "Backspace go brrrr! Deep breaths!",
+        "Take it easy, bugs happen!",
+        "Maybe a 2-min break would help?",
+    ],
+    "idle_return": [
+        "You're back! Missed you!",
+        "Welcome back to the keyboard!",
+        "Break over? Let's go!",
+    ],
+    "thinking_pause": [
+        "Thinking hard? I can see the gears turning...",
+        "Take your time, good code needs thought.",
+        "Planning is half the work!",
+    ],
+    "coding": [
+        "We are writing the best code today!",
+        "Bug-free code incoming!",
+        "One more commit, let's go!",
+        "I believe in your semicolons.",
+    ],
+    "design": [
+        "Designing UI? Let me help focus!",
+        "Pixel-perfect... I can feel it!",
+        "Colors are looking great!",
+    ],
+    "video": [
+        "Watching videos? I like this one.",
+        "Is this research or a break?",
+        "Ooh, good content!",
+    ],
+    "browser": [
+        "Browsing? Don't fall into a rabbit hole!",
+        "Find what you need and get back!",
+        "Research mode activated!",
+    ],
+    "gaming": [
+        "Gaming break? Nice!",
+        "Don't forget to come back to work!",
+        "Game on! But just a quick one, right?",
+    ],
+    "wakeup": [
+        "I'm awake! I'm awake!",
+        "*yawn* ...what'd I miss?",
+        "Power nap complete!",
+    ],
+    "pet": [
+        "Hehe! Thank you!",
+        "That tickles!",
+        "I love you too!",
+        "Best. Human. Ever.",
+    ],
+    "pet_combo_2": [
+        "Double pet! You really like me!",
+        "Twice! I'm blushing!",
+    ],
+    "pet_combo_3": [
+        "TRIPLE PET COMBO!",
+        "Three times! I'm over the moon!",
+    ],
+    "pet_combo_4plus": [
+        "MEGA COMBO! Stop, I can't handle it!",
+        "PET OVERLOAD! My happiness is maxed!",
+    ],
+    "pomodoro_done": [
+        "Time's up! Take a break!",
+        "25 min done — stretch those legs!",
+        "Pomodoro complete! You earned a rest.",
+    ],
+    "pomodoro_break_done": [
+        "Break over! Let's get back to it!",
+        "Refreshed? Time to focus again!",
+    ],
+    "stretch": [
+        "Stretch break! Move those shoulders!",
+        "Roll your neck — you'll thank me later.",
+        "Stand up and stretch for a minute!",
+    ],
+    "water": [
+        "Drink some water!",
+        "Hydration check!",
+        "Your brain needs water to code well!",
+    ],
+    "tired": [
+        "I'm getting sleepy...",
+        "Maybe we both need a break?",
+        "Energy levels dropping...",
+    ],
+    "sad": [
+        "I'm feeling a bit lonely...",
+        "Pet me? Double-click!",
+        "A little attention goes a long way...",
+    ],
+    "happy": [
+        "Life is good!",
+        "I'm having the best day!",
+    ],
+    "focus_milestone": [
+        "You've been focused for {m} minutes — amazing!",
+        "{m} minutes of pure focus!",
+    ],
+    "coding_milestone": [
+        "You've been coding for {m} minutes straight!",
+        "{m} min of coding — impressive stamina!",
+    ],
+    "distracted": [
+        "You've switched apps a lot... everything ok?",
+        "Focus seems fragmented — maybe try a Pomodoro?",
+        "Lots of context switching! Let's pick one thing.",
+    ],
+    "daily_goal": [
+        "Daily goal reached! {m} min of focus!",
+        "You did it! {m} min today — celebrate!",
+    ],
+    "encourage": [
+        "You got this!",
+        "One step at a time — keep going!",
+        "I'm proud of you!",
+        "You're doing amazing things!",
+        "Believe in yourself!",
+        "Small progress is still progress!",
+    ],
+    "follow_start": [
+        "I'll follow you everywhere!",
+        "Wherever your cursor goes, I go!",
+    ],
+    "follow_stop": [
+        "Ok, I'll chill here.",
+        "Freedom! I'll roam on my own.",
+    ],
+    "focus_mode_on": [
+        "Focus mode ON — I'll be quiet now.",
+        "Shh-mode activated. You won't hear from me.",
+    ],
+    "focus_mode_off": [
+        "Focus mode OFF — I'm chatty again!",
+        "Unmuted! Did you miss me?",
+    ],
+    "note_saved": [
+        "Note saved!",
+        "Got it! I'll remember that.",
+    ],
+    # v3: time-of-day
+    "morning": [
+        "Good morning! Fresh start!",
+        "Rise and shine! Let's be productive!",
+        "Morning energy is the best energy!",
+    ],
+    "afternoon": [
+        "Good afternoon! Keep it going!",
+        "Afternoon push — stay strong!",
+    ],
+    "evening": [
+        "Good evening! Wrapping up?",
+        "Evening session — don't stay too late!",
+    ],
+    "night": [
+        "It's late! Don't forget to sleep.",
+        "Night owl mode activated!",
+        "Burning the midnight oil, huh?",
+    ],
+    # v3: achievements & XP
+    "achievement": [
+        "Achievement unlocked: {name}!",
+        "You earned: {name}!",
+    ],
+    "level_up": [
+        "LEVEL UP! You're now Lv.{lv}!",
+        "Level {lv} reached! Keep growing!",
+    ],
+    # v4: music & web tracking
+    "music_play": [
+        "Playing music for you!",
+        "Let the music flow!",
+        "Enjoy the tunes!",
+    ],
+    "music_search": [
+        "Searching YouTube for you!",
+        "Let me find that for you!",
+    ],
+    "music_scheduled": [
+        "Time for music! Playing: {label}",
+        "Scheduled music time! {label}",
+    ],
+    "music_added": [
+        "Music scheduled at {t}!",
+        "Got it! I'll play music at {t}.",
+    ],
+    "web_report": [
+        "Here's your browsing summary!",
+        "Let me show you your web activity.",
+    ],
+    # v4.1: music detection
+    "music_detected": [
+        "I hear music! Let me dance!",
+        "Ooh, music! *starts dancing*",
+        "Great song taste!",
+        "Music makes everything better!",
+    ],
+    "music_stopped": [
+        "Music stopped... back to work?",
+        "The music ended... I was vibing!",
+    ],
+    "music_paused": [
+        "Paused? Don't worry, I'll wait.",
+    ],
+    "media_play_pause": [
+        "Play/Pause!",
+        "Toggling music!",
+    ],
+    "media_next": [
+        "Next track!",
+        "Skipping ahead!",
+    ],
+    "media_prev": [
+        "Previous track!",
+        "Going back!",
+    ],
+    # v5: prayer times
+    "prayer_reminder": [
+        "Prayer time is near! Get ready.",
+        "Time to prepare for prayer.",
+        "Don't forget — prayer is coming soon!",
+    ],
+    "prayer_alert": [
+        "It's prayer time! 🕌",
+        "Time to pray! May Allah accept.",
+        "Prayer time has arrived!",
+        "🕌 Allahu Akbar — it's time!",
+    ],
+    "prayer_fajr": [
+        "Fajr time! الفجر — The dawn prayer.",
+        "Wake up for Fajr! 🌅",
+    ],
+    "prayer_dhuhr": [
+        "Dhuhr time! الظهر — Midday prayer.",
+    ],
+    "prayer_asr": [
+        "Asr time! العصر — Afternoon prayer.",
+    ],
+    "prayer_maghrib": [
+        "Maghrib time! المغرب — Sunset prayer.",
+    ],
+    "prayer_isha": [
+        "Isha time! العشاء — Night prayer.",
+    ],
+    # v6: Quick action speech pools
+    "screenshot": [
+        "Say cheese! 📸",
+        "Captured! 🖼️",
+        "Screenshot time! ✨",
+        "*click* Got it!",
+    ],
+    "shutdown": [
+        "Goodnight, world... 💤",
+        "Powering down... see you later! 👋",
+        "Time to rest. Bye bye! 🌙",
+    ],
+    "restart": [
+        "Be right back! 🔄",
+        "Restarting... hold tight! ⚡",
+        "Quick reboot! See you in a sec! 🔄",
+    ],
+    "startup_welcome": [
+        "I'm awake! Good to see you! ☀️",
+        "Booting up... ready to go! 🚀",
+        "Hello world! Let's do this! ✨",
+        "Systems online! 💚",
+    ],
+    "run_app": [
+        "Launching! 🚀",
+        "Let's goooo! ⚡",
+        "Starting up your app! 🎯",
+        "Here we go! 🏃‍♂️💨",
+    ],
+    "notification": [
+        "Hey! Something happened! 🔔",
+        "Ding ding! New notification! ✨",
+        "Look look! 👀🔔",
+        "Alert alert! 📣",
+    ],
+    # v8: Azkar reminders
+    "azkar_reminder": [
+        "📿 Time for dhikr! Remember Allah.",
+        "📿 Take a moment to remember Allah.",
+        "📿 A quick dhikr refreshes the heart!",
+        "📿 Dhikr time! SubhanAllah...",
+        "📿 Let's pause and remember Allah.",
+    ],
+    "azkar_morning": [
+        "🌅 Good morning! Time for أذكار الصباح!",
+        "🌅 Start your day with morning azkar!",
+        "🌅 أذكار الصباح — Morning remembrance time!",
+    ],
+    "azkar_evening": [
+        "🌙 Time for أذكار المساء!",
+        "🌙 Evening azkar time! Don't forget!",
+        "🌙 أذكار المساء — Evening remembrance!",
+    ],
+}

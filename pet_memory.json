@@ -1,0 +1,21 @@
+{
+  "facts": [
+    {
+      "text": "i love coffie",
+      "topic": "general",
+      "timestamp": "2026-03-07T17:17"
+    },
+    {
+      "text": "i am a muslim",
+      "topic": "general",
+      "timestamp": "2026-03-07T17:17"
+    },
+    {
+      "text": "my name is Mohamed",
+      "topic": "name",
+      "timestamp": "2026-03-07T17:17"
+    }
+  ],
+  "preferences": {},
+  "user_info": {}
+}
