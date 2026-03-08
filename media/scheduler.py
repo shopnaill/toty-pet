@@ -2,6 +2,7 @@ import os
 import json
 import webbrowser
 from datetime import datetime
+from core.safe_json import safe_json_save
 
 
 MUSIC_SCHEDULE_PATH = "music_schedule.json"
@@ -25,8 +26,7 @@ class MusicScheduler:
                 pass
 
     def save(self):
-        with open(MUSIC_SCHEDULE_PATH, "w") as f:
-            json.dump(self.schedules, f, indent=4)
+        safe_json_save(self.schedules, MUSIC_SCHEDULE_PATH, indent=4)
 
     def add_schedule(self, time_str: str, url: str, label: str = ""):
         self.schedules.append({

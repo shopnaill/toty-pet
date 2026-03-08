@@ -7,7 +7,7 @@ to provide morning briefings and smart suggestions.
 import logging
 import os
 import random
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
 log = logging.getLogger("toty.briefing")
 
@@ -174,3 +174,84 @@ class DailyBriefing:
         if suggestions:
             return random.choice(suggestions)
         return None
+
+    def weekly_review(self) -> str:
+        """Generate a weekly review summary (best triggered on Sunday)."""
+        if not self.stats:
+            return "\U0001f4ca No stats available for weekly review."
+
+        today = date.today()
+        lines = ["\U0001f4c5 Weekly Review:\n"]
+
+        # Focus totals for past 7 days — approximate from daily_focus_min
+        total_focus = self.stats.data.get("total_focus_min", 0)
+        daily_focus = self.stats.data.get("daily_focus_min", 0)
+        streak = self.stats.data.get("current_streak", 0)
+        level = self.stats.data.get("level", 1)
+        sessions = self.stats.data.get("total_sessions", 0)
+
+        lines.append(f"\U0001f3af Focus today: {daily_focus} min")
+        lines.append(f"\U0001f4ca All-time focus: {total_focus} min | Sessions: {sessions}")
+        lines.append(f"\U0001f525 Current streak: {streak} days | \u2b50 Level {level}")
+
+        # Habit weekly performance
+        if self.habits:
+            habits = self.habits.data.get("habits", {})
+            if habits:
+                lines.append("\n\U0001f4cb Habits This Week:")
+                for key, info in sorted(habits.items()):
+                    icon = info.get("icon", "\u2705")
+                    goal = info.get("goal", 1)
+                    days_hit = 0
+                    for i in range(7):
+                        d = (today - timedelta(days=i)).isoformat()
+                        if self.habits.data.get("log", {}).get(d, {}).get(key, 0) >= goal:
+                            days_hit += 1
+                    pct = days_hit / 7 * 100
+                    bar = "\u2588" * days_hit + "\u2591" * (7 - days_hit)
+                    lines.append(f"  {icon} {key.title()}: [{bar}] {days_hit}/7 ({pct:.0f}%)")
+
+        # Todos completed this week
+        if self.stats:
+            todos = self.stats.get_todos()
+            done = [t for t in todos if t.get("done")]
+            pending = [t for t in todos if not t.get("done")]
+            overdue = self.stats.get_overdue_count()
+            lines.append(f"\n\u2705 Tasks: {len(done)} done | {len(pending)} pending")
+            if overdue:
+                lines.append(f"\u26a0\ufe0f {overdue} overdue task(s)!")
+
+        lines.append("\n\U0001f4aa Keep up the great work!")
+        return "\n".join(lines)
+
+    def smart_daily_goals(self) -> str:
+        """Auto-suggest focus goals based on recent averages."""
+        if not self.stats:
+            return ""
+
+        # Estimate a weekly average from all-time data
+        total = self.stats.data.get("total_focus_min", 0)
+        sessions = max(self.stats.data.get("total_sessions", 1), 1)
+        avg_per_session = total / sessions
+        daily_goal = self.stats.data.get("daily_focus_min", 0)
+        suggested = int(avg_per_session * 1.1)  # 10% above average
+
+        lines = ["\U0001f3af Smart Daily Goals:"]
+        lines.append(f"  \U0001f4ca Your avg focus per session: {avg_per_session:.0f} min")
+        lines.append(f"  \U0001f4a1 Suggested goal today: {suggested} min (+10%)")
+
+        if self.habits:
+            habits = self.habits.data.get("habits", {})
+            today = date.today()
+            today_log = self.habits.data.get("log", {}).get(today.isoformat(), {})
+            not_done = [k for k, info in habits.items()
+                        if today_log.get(k, 0) < info.get("goal", 1)]
+            if not_done:
+                lines.append(f"  \U0001f4cb Habits to complete: {', '.join(h.title() for h in not_done[:5])}")
+
+        if self.stats:
+            overdue = self.stats.get_overdue_count()
+            if overdue:
+                lines.append(f"  \u26a0\ufe0f {overdue} overdue task(s) — tackle those first!")
+
+        return "\n".join(lines)

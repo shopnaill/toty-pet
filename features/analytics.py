@@ -99,6 +99,6 @@ class AnalyticsDashboard(QDialog):
         return box
 
     @staticmethod
-    def _mood_bar(mood: int) -> str:
-        filled = mood // 10
+    def _mood_bar(mood: float) -> str:
+        filled = int(mood // 10)
         return "💚" * filled + "🤍" * (10 - filled)

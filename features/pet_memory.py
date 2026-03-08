@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+from core.safe_json import safe_json_save
 import time
 from datetime import datetime
 
@@ -36,8 +37,7 @@ class PetMemory:
                 pass
 
     def save(self):
-        with open(MEMORY_PATH, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=2, ensure_ascii=False)
+        safe_json_save(self.data, MEMORY_PATH)
 
     def remember(self, text: str, topic: str = "") -> str:
         """Store a fact. Returns confirmation message."""
@@ -158,3 +158,39 @@ class PetMemory:
                 if word not in {"it", "this", "that", "the", "my", "i", "he", "she"}:
                     return word
         return "general"
+
+    def learn_from_chat(self, user_msg: str, ai_reply: str):
+        """Auto-extract and store facts from chat messages."""
+        # Detect "my X is Y" patterns in user messages
+        learn_patterns = [
+            r"my (?:name|birthday|job|age|favorite|hobby|school|major|city) (?:is|are)\s+(.+)",
+            r"i (?:live in|work at|study at|go to|am from)\s+(.+)",
+            r"(?:remember|note|save)(?:\s+that)?\s+(.+)",
+        ]
+        text_lower = user_msg.strip().lower()
+        for pat in learn_patterns:
+            m = re.match(pat, text_lower)
+            if m:
+                fact = user_msg.strip()
+                # Avoid storing duplicates
+                existing = [f["text"].lower() for f in self.data.get("facts", [])]
+                if fact.lower() not in existing:
+                    self.remember(fact)
+                return
+
+        # Also detect user info key-value
+        info_patterns = [
+            (r"my name is\s+(\S+)", "name"),
+            (r"my birthday is\s+(.+)", "birthday"),
+            (r"i(?:'m| am) (\d+) years old", "age"),
+            (r"my favorite (\w+) is\s+(.+)", None),  # dynamic key
+        ]
+        for pat, key in info_patterns:
+            m = re.match(pat, text_lower)
+            if m:
+                if key:
+                    self.set_user_info(key, m.group(1).strip())
+                else:
+                    # "my favorite X is Y"
+                    self.set_preference(f"favorite_{m.group(1)}", m.group(2).strip())
+                return

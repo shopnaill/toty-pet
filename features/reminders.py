@@ -10,6 +10,7 @@ import os
 import re
 import time
 from datetime import datetime, timedelta
+from core.safe_json import safe_json_save
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
@@ -42,11 +43,11 @@ class ReminderManager(QObject):
                 pass
 
     def _save(self):
-        with open(REMINDERS_PATH, "w", encoding="utf-8") as f:
-            json.dump({
-                "reminders": self._reminders,
-                "next_id": self._next_id,
-            }, f, indent=2, ensure_ascii=False)
+        data = {
+            "reminders": self._reminders,
+            "next_id": self._next_id,
+        }
+        safe_json_save(data, REMINDERS_PATH)
 
     def _schedule_pending(self):
         """Re-schedule any reminders that haven't fired yet."""

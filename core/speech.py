@@ -310,4 +310,111 @@ SPEECH_POOL = {
         "🌙 Evening azkar time! Don't forget!",
         "🌙 أذكار المساء — Evening remembrance!",
     ],
+    # v11: Clipboard reactions
+    "clipboard_color": [
+        "🎨 Nice color! That's a good shade.",
+        "🎨 Ooh, pretty color!",
+    ],
+    "clipboard_error": [
+        "🐛 That looks like an error... need help?",
+        "💥 Error detected! Let me take a look...",
+    ],
+    "clipboard_url": [
+        "🔗 Got a link! Be careful out there~",
+        "🌐 URL copied! Exploring the web?",
+    ],
+    "clipboard_code": [
+        "💻 Code snippet! Looking good~",
+        "📋 Code copied! Paste with confidence!",
+    ],
+    # v11: System health
+    "system_hot": [
+        "🔥 CPU is working hard! *sweats*",
+        "💻 Things are heating up in here!",
+    ],
+    "system_cool": [
+        "😌 System calmed down. All good!",
+        "💨 Nice, CPU cooled off.",
+    ],
+    # v11: File drop
+    "file_dropped": [
+        "📦 Ooh, a delivery! Let me check...",
+        "📁 You dropped something! Let me see...",
+    ],
+    # v11: Sound reactions
+    "sound_loud": [
+        "😱 Whoa! That was loud!",
+        "🔊 My ears! What was that?!",
+    ],
+    "sound_quiet": [
+        "😴 So quiet... *yawn*",
+        "🤫 Shhh... I can hear a pin drop.",
+    ],
+    # v11: Code companion
+    "git_uncommitted": [
+        "📝 You have uncommitted changes! Don't forget to commit!",
+        "💾 Save your work! Git status looking busy.",
+    ],
+    "git_long_no_commit": [
+        "⏰ It's been a while since your last commit...",
+        "📌 Maybe time for a checkpoint commit?",
+    ],
+    # v11: Challenges
+    "challenge_complete": [
+        "🏆 Challenge COMPLETE! Nice work!",
+        "⭐ You crushed that challenge!",
+        "🎉 Challenge done! XP earned!",
+    ],
+    "evolution_unlocked": [
+        "🌟 I evolved! I feel stronger!",
+        "✨ New form unlocked! Look at me!",
+    ],
+    # v12: Eye care & health breaks
+    "eye_break": [
+        "👁️ 20-20-20! Look away for 20 seconds!",
+        "👀 Time to rest your eyes! Look far away~",
+        "Your eyes need a micro-break!",
+    ],
+    "water_break": [
+        "💧 Hydration check! Drink some water!",
+        "🥤 Water break! Your body will thank you!",
+        "💧 Stay hydrated, friend!",
+    ],
+    "stretch_break": [
+        "🧘 Stand up and stretch!",
+        "💪 Stretch time! Move those muscles!",
+        "🏃 Quick stretch break!",
+    ],
+    "break_done": [
+        "Great job taking a break! 👏",
+        "Your eyes thank you! Back to it~",
+        "Break complete! You're awesome! ✨",
+    ],
+    # v12: Weather
+    "weather_hot": [
+        "🌡️ It's really hot outside!",
+        "☀️ Stay cool and hydrated!",
+    ],
+    "weather_cold": [
+        "🥶 Brr! Bundle up out there!",
+        "🧣 It's cold! Stay warm!",
+    ],
+    # v12: Screenshot
+    "screenshot_taken": [
+        "📸 Screenshot saved!",
+        "🖼️ Got it! Screenshot captured!",
+        "📷 Snap! Screenshot ready!",
+    ],
+    # v12: Journal
+    "journal_prompt": [
+        "📓 How was your day? Time to journal!",
+        "📝 End of day! Want to write your thoughts?",
+        "🌙 Before bed — quick journal entry?",
+    ],
+    # v12: Reminder
+    "reminder_set": [
+        "⏰ Reminder set! I'll let you know!",
+        "📌 Got it! I'll remind you!",
+        "✅ Reminder saved!",
+    ],
 }

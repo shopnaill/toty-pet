@@ -1,11 +1,12 @@
 import os
 import json
+from core.safe_json import safe_json_save
 
 
 class Settings:
     DEFAULTS = {
         "pet_name": "Blobby",
-        "speech_cooldown_sec": 8,
+        "speech_cooldown_sec": 12,
         "typing_fast_threshold": 5,
         "idle_sleep_timeout_sec": 20,
         "brain_tick_ms": 3000,
@@ -44,6 +45,7 @@ class Settings:
         "pet_combo_window_sec": 2.0,
         "enable_multi_monitor": True,
         "bubble_mood_colors": True,
+        "bubble_min_duration_ms": 10000,
         # v5: Prayer times
         "enable_prayer_times": True,
         "prayer_reminder_min": 10,
@@ -70,6 +72,23 @@ class Settings:
         "current_skin": "default",
         # v11: Progress monitor
         "enable_progress_monitor": True,
+        # v11: New features
+        "enable_clipboard_assistant": True,
+        "enable_system_health": True,
+        "enable_sound_reactor": False,  # opt-in (needs mic permission)
+        "enable_code_companion": True,
+        "enable_daily_challenges": True,
+        "notification_digest_min": 15,
+        "enable_file_drop": True,
+        # v12: New features
+        "enable_pet_sounds": True,
+        "pet_sound_volume": 0.4,
+        "enable_global_hotkeys": True,
+        "enable_eye_care": True,
+        "eye_break_min": 20,
+        "enable_weather": True,
+        "enable_system_tray": True,
+        "enable_voice_commands": False,
     }
 
     def __init__(self, path="settings.json"):
@@ -87,8 +106,7 @@ class Settings:
         self.save()
 
     def save(self):
-        with open(self.path, "w") as f:
-            json.dump(self.data, f, indent=4)
+        safe_json_save(self.data, self.path, indent=4)
 
     def get(self, key):
         return self.data.get(key, self.DEFAULTS.get(key))

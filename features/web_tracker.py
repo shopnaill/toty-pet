@@ -3,6 +3,7 @@ import re
 import json
 import time
 from datetime import date
+from core.safe_json import safe_json_save
 
 
 WEB_TRACKER_PATH = "web_visits.json"
@@ -37,8 +38,7 @@ class WebsiteTracker:
                 pass
 
     def save(self):
-        with open(WEB_TRACKER_PATH, "w") as f:
-            json.dump(self.data, f, indent=4)
+        safe_json_save(self.data, WEB_TRACKER_PATH, indent=4)
 
     def record_window(self, title: str):
         site = self._detect_site(title)

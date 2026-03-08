@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+from core.safe_json import safe_json_save
 from datetime import date, datetime, timedelta
 
 log = logging.getLogger("toty.habits")
@@ -34,8 +35,7 @@ class HabitTracker:
                 pass
 
     def _save(self):
-        with open(HABITS_PATH, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=2, ensure_ascii=False)
+        safe_json_save(self.data, HABITS_PATH)
 
     def _today(self) -> str:
         return date.today().isoformat()
@@ -154,6 +154,88 @@ class HabitTracker:
         ratio = min(current / max(goal, 1), 1.0)
         filled = int(ratio * width)
         return "\u2588" * filled + "\u2591" * (width - filled)
+
+    def analytics(self) -> str:
+        """Full analytics dashboard: completion rates, best times, streak records."""
+        habits = self.data.get("habits", {})
+        if not habits:
+            return "\U0001f4cb No habits tracked yet!"
+
+        today = date.today()
+        lines = ["\U0001f4ca Habit Analytics Dashboard:\n"]
+
+        for key, info in sorted(habits.items()):
+            icon = info.get("icon", "\u2705")
+            goal = info.get("goal", 1)
+            streak = self._get_streak(key)
+
+            # Completion rate (last 30 days)
+            days_30 = 0
+            for i in range(30):
+                d = (today - timedelta(days=i)).isoformat()
+                if self.data["log"].get(d, {}).get(key, 0) >= goal:
+                    days_30 += 1
+            rate_30 = days_30 / 30 * 100
+
+            # Last 7 days sparkline
+            week_dots = []
+            for i in range(6, -1, -1):
+                d = (today - timedelta(days=i)).isoformat()
+                if self.data["log"].get(d, {}).get(key, 0) >= goal:
+                    week_dots.append("\u2588")
+                else:
+                    week_dots.append("\u2591")
+            sparkline = "".join(week_dots)
+
+            # Best streak ever
+            best_streak = self._best_streak(key)
+
+            lines.append(f"  {icon} {key.title()}:")
+            lines.append(f"    Week: [{sparkline}]  |  30d: {rate_30:.0f}%")
+            lines.append(f"    \U0001f525 Current: {streak}d  |  Best: {best_streak}d")
+
+        # Weekly comparison: this week vs last week
+        this_week_total = 0
+        last_week_total = 0
+        for key, info in habits.items():
+            goal = info.get("goal", 1)
+            for i in range(7):
+                d = (today - timedelta(days=i)).isoformat()
+                if self.data["log"].get(d, {}).get(key, 0) >= goal:
+                    this_week_total += 1
+            for i in range(7, 14):
+                d = (today - timedelta(days=i)).isoformat()
+                if self.data["log"].get(d, {}).get(key, 0) >= goal:
+                    last_week_total += 1
+
+        diff = this_week_total - last_week_total
+        arrow = "\u2b06\ufe0f" if diff > 0 else "\u2b07\ufe0f" if diff < 0 else "\u27a1\ufe0f"
+        lines.append(f"\n  \U0001f4c8 This week: {this_week_total} vs last week: {last_week_total} {arrow}")
+
+        return "\n".join(lines)
+
+    def _best_streak(self, habit_key: str) -> int:
+        """Calculate best-ever streak for a habit."""
+        goal = self.data["habits"].get(habit_key, {}).get("goal", 1)
+        created = self.data["habits"].get(habit_key, {}).get("created", "")
+        if not created:
+            return 0
+        try:
+            start = date.fromisoformat(created)
+        except ValueError:
+            return 0
+        best = 0
+        current = 0
+        d = start
+        today_d = date.today()
+        while d <= today_d:
+            if self.data["log"].get(d.isoformat(), {}).get(habit_key, 0) >= goal:
+                current += 1
+                best = max(best, current)
+            else:
+                current = 0
+            d += timedelta(days=1)
+        return best
 
     def _auto_detect_habit(self, key: str) -> dict | None:
         """Auto-detect common habits and assign icons/goals."""

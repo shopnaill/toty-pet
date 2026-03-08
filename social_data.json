@@ -1,0 +1,19 @@
+{
+  "today_challenges": [
+    "type_500",
+    "type_2000",
+    "type_5000"
+  ],
+  "completed_today": [
+    "type_500",
+    "type_2000",
+    "type_5000"
+  ],
+  "challenge_date": "2026-03-08",
+  "total_challenges_done": 5,
+  "evolution_announced": [
+    1,
+    5,
+    10
+  ]
+}

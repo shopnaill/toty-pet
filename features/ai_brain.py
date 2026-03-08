@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import threading
 import urllib.request
 import urllib.error
@@ -14,8 +15,11 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from PyQt6.QtGui import QFont, QColor, QTextCharFormat
 
 from core.settings import Settings
+from core.safe_json import safe_json_save
 
 log = logging.getLogger("toty.ai")
+
+_CHAT_HISTORY_PATH = "ai_chat_history.json"
 
 
 class OllamaBrain:
@@ -33,7 +37,24 @@ class OllamaBrain:
         self._chat_history: list[dict] = []
         self._max_history = 20
         self._callback_signal = None
+        self._load_history()
         threading.Thread(target=self._check_availability, daemon=True).start()
+
+    def _load_history(self):
+        if os.path.exists(_CHAT_HISTORY_PATH):
+            try:
+                with open(_CHAT_HISTORY_PATH, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self._chat_history = data.get("messages", [])[-self._max_history:]
+            except (json.JSONDecodeError, IOError):
+                pass
+
+    def _save_history(self):
+        try:
+            safe_json_save({"messages": self._chat_history[-self._max_history:]},
+                           _CHAT_HISTORY_PATH)
+        except IOError:
+            pass
 
     def _check_availability(self):
         self._checking = True
@@ -147,6 +168,7 @@ class OllamaBrain:
         self._chat_history.append({"role": "user", "content": user_message})
         if len(self._chat_history) > self._max_history:
             self._chat_history = self._chat_history[-self._max_history:]
+        self._save_history()
 
         system_prompt = self._build_system_prompt(context)
         messages = [{"role": "system", "content": system_prompt}] + list(self._chat_history)
@@ -184,6 +206,7 @@ class OllamaBrain:
                     reply = "".join(full_reply).strip()
                     if reply:
                         self._chat_history.append({"role": "assistant", "content": reply})
+                        self._save_history()
                     callback(reply if reply else None, None)
                 else:
                     with urllib.request.urlopen(req, timeout=30) as resp:
@@ -191,6 +214,7 @@ class OllamaBrain:
                         reply = body.get("message", {}).get("content", "").strip()
                         if reply:
                             self._chat_history.append({"role": "assistant", "content": reply})
+                            self._save_history()
                         callback(reply if reply else None, None)
             except urllib.error.HTTPError as exc:
                 err_body = ""
@@ -407,6 +431,7 @@ class OllamaBrain:
 
     def clear_history(self):
         self._chat_history.clear()
+        self._save_history()
 
 
 class AIChatSignal(QObject):
@@ -729,6 +754,7 @@ class AIChatDialog(QDialog):
 
         # Start streaming display
         self._start_stream_message()
+        _user_text = text  # capture for learn_from_chat
 
         def on_token(token):
             self._signal.stream_token.emit(token)
@@ -741,6 +767,12 @@ class AIChatDialog(QDialog):
             else:
                 # reply already streamed, just signal done
                 self._signal.response_ready.emit("")
+                # v14: auto-learn from chat
+                if self.memory:
+                    try:
+                        self.memory.learn_from_chat(_user_text, reply)
+                    except Exception:
+                        pass
             self._signal.thinking_done.emit()
 
         self.brain.chat(text, context, on_done, stream_callback=on_token)

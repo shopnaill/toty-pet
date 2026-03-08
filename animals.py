@@ -54,9 +54,73 @@ from features.progress_monitor import ProgressMonitor, _format_speed, _format_si
 from features.pet_memory import PetMemory
 from features.reminders import ReminderManager
 from features.habits import HabitTracker
+from features.streak_calendar import StreakCalendarDialog
+from features.circadian import get_circadian_phase, circadian_speech
+from features.voice_commands import VoiceCommands
+from features.wardrobe import Wardrobe, WardrobeDialog, WARDROBE_ITEMS
+from features.accessory_drawer import COSMETIC_DRAWERS
 from features.daily_briefing import DailyBriefing
+from features.reactions import ReactionEngine
+from features.tasbeeh import TasbeehCounter, TASBEEH_PRESETS
+from features.clipboard_assistant import ClipboardAssistant
+from features.system_health import SystemHealthMonitor
+from features.file_drop import FileDropHandler
+from features.quick_launcher import QuickLauncherWheel, LauncherEditDialog
+from features.notification_digest import NotificationDigest
+from features.productivity_dashboard import ProductivityDashboard
+from features.sound_reactor import SoundReactor
+from features.code_companion import CodeCompanion
+from features.social import SocialFeatures
+from features.global_hotkeys import GlobalHotkeys
+from features.smart_reminders import SmartReminderManager, parse_time_input
+from features.eye_care import EyeCareManager
+from features.sticky_notes import StickyNotesManager, StickyArchiveDialog
+from features.smart_actions import AISmartActions, SMART_ACTIONS
+from features.tray_manager import TrayManager
+from features.weather import WeatherReactor
+from features.screenshot_tool import ScreenshotTool
+from features.journal import DailyJournal, JournalDialog
+from features.backup import BackupManager
+from features.pet_sfx import PetSFX
+from features.clipboard_history import ClipboardHistory
+from features.quick_timer import QuickTimer
+from features.app_time_report import AppTimeTracker, AppTimeDialog
+from features.morning_routine import MorningRoutine
+from features.focus_planner import FocusPlanner
+from features.mood_journal import MoodJournal, MoodJournalDialog
+from features.keyboard_heatmap import KeyboardHeatmapTracker, KeyboardHeatmapDialog
+from features.meeting_mode import MeetingDetector
+from features.real_events import RealEventReactor
+from features.global_hotkeys import HotkeyHelpDialog
+from features.screen_recorder import ScreenRecorder, RecordDialog
+from features.folder_locker import FolderLocker, FolderLockerDialog
+from features.file_compressor import FileCompressorDialog
 
-__version__ = "10.0.0"
+__version__ = "14.0.0"
+
+# ── Menu stylesheet (shared by all context menus) ──
+_MENU_SS = (
+    "QMenu { background: #F5F5F5; border: 1px solid #888; }"
+    "QMenu::item { padding: 6px 24px; color: #222222; }"
+    "QMenu::item:selected { background: #5599ff; color: white; }"
+    "QMenu::item:disabled { color: #888888; }"
+    "QMenu::separator { height: 1px; background: #ccc; margin: 4px 8px; }"
+)
+_SUB_MENU_SS = (
+    "QMenu { background: #F5F5F5; border: 1px solid #888; }"
+    "QMenu::item { padding: 6px 20px; color: #222222; }"
+    "QMenu::item:selected { background: #5599ff; color: white; }"
+)
+
+# ── Window category keywords (shared reference) ──
+_CODING_KW = ("code", "pycharm", "gym engine", "openclaw", "visual studio",
+              "intellij", "neovim", "sublime", "atom", "terminal", "powershell",
+              "cmd.exe", "git")
+_DESIGN_KW = ("refreshyourpassionapp", "motiv8", "photoshop", "figma",
+              "illustrator", "canva", "sketch", "blender")
+_VIDEO_KW  = ("youtube", "netflix", "twitch", "vlc", "mpv", "plex")
+_BROWSER_KW = ("chrome", "firefox", "edge", "brave", "opera", "safari")
+_GAMING_KW  = ("steam", "epic games", "minecraft", "valorant", "discord")
 
 # ── Logging ──
 logging.basicConfig(
@@ -73,13 +137,19 @@ log = logging.getLogger("toty")
 class _WindowScanner(QObject):
     """Runs pygetwindow in a background thread, emits result on the main thread."""
     result_ready = pyqtSignal(str)  # window title (or empty string)
+    _busy = False  # simple reentrance guard
 
     def scan(self):
+        if self._busy:
+            return
+        self._busy = True
         try:
             w = gw.getActiveWindow()
             self.result_ready.emit(w.title if w else "")
         except Exception:
             self.result_ready.emit("")
+        finally:
+            self._busy = False
 
 
 # ============================================================
@@ -145,6 +215,18 @@ class DesktopPet(QWidget):
         self._sprite_renderer.move(75, 100)
         self.xp_label.move(50, 200)
 
+        # Accessory overlay system (tools the pet wears/holds based on activity)
+        self._accessory_label = QLabel(self)
+        self._accessory_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._accessory_label.setFixedSize(self.pet_width, self.pet_height)
+        self._accessory_label.move(75, 100)
+        self._accessory_label.hide()
+        self._current_accessory = ""
+        self._accessory_cache: dict[str, QPixmap] = {}  # pre-rendered pixmaps
+
+        # Error tracking for feature init failures
+        self._feature_errors: list[str] = []
+
         # 4. Physics & Screen Setup — v3: multi-monitor aware
         self._update_screen_geometry()
 
@@ -162,14 +244,16 @@ class DesktopPet(QWidget):
         # 6. Speech cooldown
         self._last_speech_time = 0.0
         self._last_speech_text = ""
+        self._bubble_expires_at = 0.0  # timestamp when current bubble should disappear
+        self._speech_queue: deque[tuple[str, int]] = deque(maxlen=8)  # (text, duration) queue
         self._bubble_timer = QTimer(self)
         self._bubble_timer.setSingleShot(True)
-        self._bubble_timer.timeout.connect(self.hide_bubble)
+        self._bubble_timer.timeout.connect(self._on_bubble_expired)
 
         # 7. Timers
         self.movement_timer = QTimer(self)
         self.movement_timer.timeout.connect(self.update_movement)
-        self.movement_timer.start(30)
+        self.movement_timer.start(50)  # 50ms (was 30ms — saves CPU)
 
         self.brain_timer = QTimer(self)
         self.brain_timer.timeout.connect(self.decide_next_action)
@@ -204,7 +288,7 @@ class DesktopPet(QWidget):
         # 9. Mood tick
         self.mood_timer = QTimer(self)
         self.mood_timer.timeout.connect(self._mood_tick)
-        self.mood_timer.start(1000)
+        self.mood_timer.start(2000)  # 2s (was 1s — mood lerp smooths fine at this rate)
 
         # 10. Productivity
         self.pomodoro_active = False
@@ -216,6 +300,16 @@ class DesktopPet(QWidget):
         self._water_counter = 0
         self._reminder_timer = QTimer(self)
         self._reminder_timer.timeout.connect(self._reminder_tick)
+
+        # 10b. Focus milestones
+        self._focus_milestones_hit: set[int] = set()  # thresholds already announced
+        self._FOCUS_MILESTONES = {
+            30:  ("🏅 30-Minute Focus!", "Half hour of focus! Great start!"),
+            60:  ("🥉 1-Hour Focus!", "A full hour of deep work! Amazing! 🔥"),
+            120: ("🥈 2-Hour Focus!", "TWO hours straight?! You're on fire! 💪"),
+            180: ("🥇 3-Hour Focus!", "3 HOURS! You're a focus machine! 🤖"),
+            300: ("🏆 5-Hour Focus!", "FIVE HOURS! Absolute legend status! 👑"),
+        }
         if self.settings.get("enable_reminders"):
             self._reminder_timer.start(1000)
 
@@ -313,6 +407,29 @@ class DesktopPet(QWidget):
             memory=self.pet_memory,
         )
 
+        # 28c. Reaction engine (cursor awareness, chains, startled, comedy, etc.)
+        self.reaction_engine = ReactionEngine(
+            self.settings, self.mood_engine, self.stats, pet_memory=self.pet_memory,
+        )
+        self.reaction_engine.log_session_start()
+        self._reaction_timer = QTimer(self)
+        self._reaction_timer.timeout.connect(self._reaction_tick)
+        self._reaction_timer.start(3000)  # every 3s for chains/fidgets/comedy/dreams
+
+        # Cursor awareness timer (faster — every 100ms)
+        self._cursor_track_timer = QTimer(self)
+        self._cursor_track_timer.timeout.connect(self._cursor_awareness_tick)
+        self._cursor_track_timer.start(100)
+
+        # Mood snapshot timer (every 5 min for emotional memory)
+        self._mood_snapshot_timer = QTimer(self)
+        self._mood_snapshot_timer.timeout.connect(self.reaction_engine.log_mood_snapshot)
+        self._mood_snapshot_timer.start(5 * 60 * 1000)
+
+        # Multi-phase greeting state
+        self._greeting_phase = 0
+        self._greeting_scheduled = False
+
         # 29. v7: Windows Notification Reader
         self.notif_reader = WindowsNotificationReader()
         self._notif_timer = QTimer(self)
@@ -360,6 +477,226 @@ class DesktopPet(QWidget):
         self._progress_monitor.updated.connect(self._on_progress_updated)
         self._progress_monitor.item_started.connect(self._on_progress_started)
         self._progress_monitor.item_finished.connect(self._on_progress_finished)
+
+        # 34. Tasbeeh counter
+        self.tasbeeh = TasbeehCounter()
+
+        # 35. Clipboard assistant
+        self._clipboard_assistant = None
+        if self.settings.get("enable_clipboard_assistant"):
+            self._clipboard_assistant = ClipboardAssistant()
+            self._clipboard_assistant.event_detected.connect(self._on_clipboard_event)
+
+        # 36. System health monitor
+        self._system_health = None
+        if self.settings.get("enable_system_health"):
+            try:
+                self._system_health = SystemHealthMonitor(interval_ms=15000)
+                self._system_health.alert.connect(self._on_system_health_alert)
+            except Exception as exc:
+                self._feature_errors.append(f"System Health: {exc}")
+                log.warning("SystemHealthMonitor init failed: %s", exc)
+
+        # 37. File drop handler
+        self._file_drop = FileDropHandler()
+        if self.settings.get("enable_file_drop"):
+            self.setAcceptDrops(True)
+
+        # 38. Quick launcher wheel
+        self._quick_launcher = QuickLauncherWheel(None)
+        self._quick_launcher.action_triggered.connect(self._on_quick_action)
+
+        # 39. Smart notification digest
+        self._notif_digest = NotificationDigest(
+            interval_min=self.settings.get("notification_digest_min")
+        )
+        self._notif_digest.digest_ready.connect(self._on_notif_digest)
+
+        # 40. Productivity dashboard
+        self._prod_dashboard = ProductivityDashboard(
+            self.stats, self.mood_engine, self.habit_tracker, self.settings
+        )
+
+        # 41. Sound reactor (microphone)
+        self._sound_reactor = None
+        if self.settings.get("enable_sound_reactor"):
+            try:
+                self._sound_reactor = SoundReactor(enabled=True)
+                self._sound_reactor.reaction.connect(self._on_sound_reaction)
+            except Exception as exc:
+                self._feature_errors.append(f"Sound Reactor: {exc}")
+                log.warning("SoundReactor init failed: %s", exc)
+
+        # 42. Code companion (git watcher)
+        self._code_companion = None
+        if self.settings.get("enable_code_companion"):
+            try:
+                self._code_companion = CodeCompanion(check_interval_ms=60000)
+                self._code_companion.alert.connect(self._on_code_companion_alert)
+            except Exception as exc:
+                self._feature_errors.append(f"Code Companion: {exc}")
+                log.warning("CodeCompanion init failed: %s", exc)
+
+        # 43. Social features (challenges, evolution)
+        self.social = SocialFeatures(self.stats)
+        self.social.challenge_completed.connect(self._on_challenge_completed)
+        self.social.evolution_unlocked.connect(self._on_evolution_unlocked)
+        self._challenge_check_timer = QTimer(self)
+        self._challenge_check_timer.timeout.connect(self._check_daily_challenges)
+        if self.settings.get("enable_daily_challenges"):
+            self._challenge_check_timer.start(60000)  # check every minute
+
+        # 44. Pet Sound Effects
+        self._sfx = PetSFX(
+            enabled=self.settings.get("enable_pet_sounds"),
+            volume=self.settings.get("pet_sound_volume"),
+        )
+
+        # 45. Global Hotkeys
+        self._hotkeys = GlobalHotkeys()
+        self._hotkeys.triggered.connect(self._on_hotkey)
+        if self.settings.get("enable_global_hotkeys"):
+            self._hotkeys.start()
+
+        # 46. Smart Reminders v2
+        self._smart_reminders = SmartReminderManager()
+        self._smart_reminders.reminder_fired.connect(self._on_smart_reminder)
+
+        # 47. Eye Care (20-20-20)
+        self._eye_care = None
+        if self.settings.get("enable_eye_care"):
+            self._eye_care = EyeCareManager(
+                eye_min=self.settings.get("eye_break_min"),
+                water_min=self.settings.get("water_reminder_min"),
+                stretch_min=self.settings.get("stretch_reminder_min"),
+            )
+            self._eye_care.break_needed.connect(self._on_health_break)
+            self._eye_care.break_finished.connect(self._on_break_done)
+
+        # 48. Sticky Notes
+        self._sticky_notes = StickyNotesManager()
+
+        # 49. AI Smart Actions
+        self._smart_actions = AISmartActions(self.ai_brain)
+        self._smart_actions.action_started.connect(
+            lambda action: self.say("💭 AI is thinking...", duration=3000)
+        )
+        self._smart_actions.action_result.connect(self._on_smart_action_result)
+        self._smart_actions.action_error.connect(
+            lambda msg: self.say(f"❌ {msg}", duration=4000, force=True)
+        )
+
+        # 50. System Tray
+        self._tray = None
+        if self.settings.get("enable_system_tray"):
+            self._tray = TrayManager(self.settings.get("pet_name"))
+            self._tray.show_pet.connect(self.show)
+            self._tray.hide_pet.connect(self.hide)
+            self._tray.toggle_dnd.connect(self._toggle_dnd)
+            self._tray.toggle_focus.connect(self._toggle_focus_mode)
+            self._tray.open_dashboard.connect(self._toggle_dashboard)
+            self._tray.open_launcher.connect(
+                lambda: self._quick_launcher.show_at(
+                    self.pos() + QPoint(self.width() // 2, self.height() // 2)
+                )
+            )
+            self._tray.quit_app.connect(self._graceful_quit)
+            self._tray.show()
+
+        # 51. Weather Reactor
+        self._weather = None
+        if self.settings.get("enable_weather"):
+            self._weather = WeatherReactor(
+                lat=self.settings.get("prayer_latitude"),
+                lon=self.settings.get("prayer_longitude"),
+            )
+            self._weather.weather_comment.connect(
+                lambda msg: self.say(msg, duration=5000)
+            )
+            self._weather.accessory_suggest.connect(self._weather_accessory)
+            self._weather.rain_warning.connect(
+                lambda msg: self.say(msg, duration=6000, force=True)
+            )
+
+        # 52. Screenshot Tool
+        self._screenshot = ScreenshotTool()
+        self._screenshot.captured.connect(self._on_screenshot)
+
+        # 53. Daily Journal
+        self._journal = DailyJournal(prompt_hour=21)
+        self._journal.prompt_journal.connect(self._prompt_journal)
+        self._journal.entry_saved.connect(self._on_journal_saved)
+
+        # 54. Backup Manager
+        self._backup = BackupManager(".")
+
+        # 55. Circadian Cycle
+        self._circadian_phase = get_circadian_phase()["phase"]
+        self._circadian_timer = QTimer(self)
+        self._circadian_timer.timeout.connect(self._check_circadian)
+        self._circadian_timer.start(120_000)  # check every 2 min
+
+        # 56. Voice Commands
+        self._voice = VoiceCommands()
+        if self.settings.get("enable_voice_commands") and self._voice.is_available():
+            self._voice.command_recognized.connect(self._on_voice_command)
+            self._voice.start()
+
+        # 57. Wardrobe (cosmetic accessories)
+        self._wardrobe = Wardrobe()
+
+        # 58. Clipboard History Panel
+        self._clipboard_history = ClipboardHistory()
+
+        # 59. Quick Timer / Stopwatch
+        self._quick_timer = QuickTimer()
+        self._quick_timer.timer_finished.connect(
+            lambda msg: self.say(f"⏱️ {msg}", duration=5000, force=True))
+
+        # 60. App Time Tracker
+        self._app_time_tracker = AppTimeTracker()
+
+        # 61. Morning Routine Checklist
+        self._morning_routine = MorningRoutine()
+        self._morning_routine.all_done.connect(
+            lambda: self.say("🌅 Morning routine complete! Great start!", duration=4000, force=True))
+        hour_now = datetime.now().hour
+        if 5 <= hour_now <= 10:
+            QTimer.singleShot(3000, self._morning_routine.show)
+
+        # 62. Focus Session Planner
+        self._focus_planner = FocusPlanner()
+        self._focus_planner.break_time.connect(
+            lambda: self.say("☕ Focus break! Stretch and relax.", duration=4000, force=True))
+        self._focus_planner.session_ended.connect(
+            lambda: self.say("✅ Focus session complete!", duration=4000, force=True))
+
+        # 63. Mood Journal
+        self._mood_journal = MoodJournal()
+        self._mood_journal.prompt_mood.connect(self._show_mood_journal)
+
+        # 64. Keyboard Heatmap Tracker
+        self._kb_heatmap = KeyboardHeatmapTracker()
+
+        # 65. Meeting Detector
+        self._meeting_detector = MeetingDetector()
+        self._meeting_detector.meeting_started.connect(self._on_meeting_start)
+        self._meeting_detector.meeting_ended.connect(self._on_meeting_end)
+
+        # 66. Real Event Reactor
+        self._real_events = RealEventReactor()
+        self._real_events.real_event.connect(
+            lambda etype, msg: self.say(msg, duration=4000, force=True))
+
+        # 67. Screen Recorder
+        self._screen_recorder = ScreenRecorder()
+        self._screen_recorder.recording_started.connect(
+            lambda: self.say("🔴 Recording started!", duration=2000, force=True))
+        self._screen_recorder.recording_stopped.connect(
+            lambda p: self.say(f"✅ Recording saved!", duration=3000, force=True))
+
+        # 68. Folder Locker
+        self._folder_locker = FolderLocker()
 
         # 27. Welcome + time greeting
         QTimer.singleShot(1500, self._show_welcome)
@@ -572,6 +909,13 @@ class DesktopPet(QWidget):
         }
         self.current_anim = None
 
+    # State → SFX mapping for automatic sound on state change
+    _STATE_SFX_MAP = {
+        "sleep": "sleep", "yawn": "yawn", "falling": "fall",
+        "dance": "happy", "smile": "happy", "excited": "giggle",
+        "sad": "sad", "work": "typing",
+    }
+
     def set_state(self, new_state):
         # Sprite engine path
         if self._use_sprites:
@@ -579,6 +923,10 @@ class DesktopPet(QWidget):
                 return
             self.pet_state = new_state
             self._sprite_renderer.play(new_state)
+            self._auto_equip_for_state(new_state)
+            sfx_name = self._STATE_SFX_MAP.get(new_state)
+            if sfx_name and hasattr(self, '_sfx'):
+                self._sfx.play(sfx_name)
             return
 
         # GIF fallback path
@@ -597,6 +945,10 @@ class DesktopPet(QWidget):
             self.pet_label.setPixmap(self.current_anim)
             self.pet_label.setText(f" {new_state.upper()} ")
             self.pet_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._auto_equip_for_state(new_state)
+        sfx_name = self._STATE_SFX_MAP.get(new_state)
+        if sfx_name and hasattr(self, '_sfx'):
+            self._sfx.play(sfx_name)
 
     # ==========================================================
     #  BRAIN (v3: + time-of-day greeting)
@@ -606,6 +958,14 @@ class DesktopPet(QWidget):
             return
         if self.settings.get("enable_follow_cursor"):
             return
+
+        # Circadian auto-sleep
+        circ = get_circadian_phase()
+        if circ["auto_state"] and self.pet_state != circ["auto_state"]:
+            if circ["auto_state"] in (self.animations if not self._use_sprites
+                                      else [a for a in ["sleep"] if self._sprite_renderer.has_animation(a)]):
+                self.set_state(circ["auto_state"])
+                return
 
         dominant = self.mood_engine.get_dominant_state()
         weight_map = {
@@ -621,6 +981,11 @@ class DesktopPet(QWidget):
             ["idle", "move_left", "move_right"], weights=weights, k=1
         )[0]
         available_gifs = self.action_categories.get(action_type, ["idle"])
+
+        # Blend in circadian preferred states (30% chance)
+        if random.random() < 0.3 and circ["preferred_states"]:
+            available_gifs = circ["preferred_states"]
+
         if self._use_sprites:
             valid_gifs = [g for g in available_gifs if self._sprite_renderer.has_animation(g)]
         else:
@@ -661,11 +1026,24 @@ class DesktopPet(QWidget):
         if self.settings.get("bubble_mood_colors") and self.bubble.isVisible():
             self._update_bubble_style()
 
-        # Focus milestones
+        # Focus milestones (every 15 min)
         focus_min = self.mood_engine.get_focus_minutes()
         if focus_min > 0 and focus_min % 15 == 0 and focus_min != self._last_focus_milestone:
             self._last_focus_milestone = focus_min
             self.say_random("focus_milestone", m=focus_min)
+
+        # Big focus milestones (badges)
+        for threshold, (badge, msg) in self._FOCUS_MILESTONES.items():
+            if focus_min >= threshold and threshold not in self._focus_milestones_hit:
+                self._focus_milestones_hit.add(threshold)
+                self.say(f"{badge}\n{msg}", duration=6000, force=True)
+                self.mood_engine.boost_mood(10)
+                if self.settings.get("enable_xp_system"):
+                    self.stats.add_xp(threshold // 10)
+                    self._update_xp_label()
+                # Unlock cape at 3h focus
+                if threshold >= 180:
+                    self._wardrobe.unlock("cape")
 
         # Daily goal
         daily_goal = self.settings.get("daily_goal_focus_min")
@@ -695,6 +1073,7 @@ class DesktopPet(QWidget):
         for aid in self.achievement_engine.pop_pending():
             info = ACHIEVEMENTS.get(aid, {})
             name = info.get("name", aid)
+            self._sfx.play("achievement")
             self.say_random("achievement", name=name, duration=5000)
             self.mood_engine.boost_mood(10)
             self._update_xp_label()
@@ -707,6 +1086,12 @@ class DesktopPet(QWidget):
                 f"| {unlocked}/{total} achievements"
             )
 
+        # Wardrobe unlock check
+        newly = self._wardrobe.check_unlocks(self.stats, self.habit_tracker)
+        for item_id in newly:
+            name = next((n for i, n, *_ in WARDROBE_ITEMS if i == item_id), item_id)
+            self.say(f"🎉 New wardrobe item unlocked: {name}!", duration=5000, force=True)
+
     # ==========================================================
     #  v3: XP AWARD (every 60 s)
     # ==========================================================
@@ -717,6 +1102,7 @@ class DesktopPet(QWidget):
             self._update_xp_label()
             if leveled:
                 lv = self.stats.data.get("level", 1)
+                self._sfx.play("level_up")
                 self.say_random("level_up", lv=lv, duration=5000)
                 self.mood_engine.boost_mood(15)
                 self.mood_engine.boost_energy(10)
@@ -727,23 +1113,26 @@ class DesktopPet(QWidget):
     def _analyze_typing_patterns(self):
         if self.settings.get("focus_mode") or self.emotion_override:
             return
+        # Skip analysis when user hasn't typed recently (no events to process)
+        if self.keystroke_count == 0 and self.idle_seconds > 10:
+            return
         events = self.typing_analyzer.consume_events()
 
         if events["idle_returned"]:
-            self.say_random("idle_return", duration=3000)
+            self.say_random("idle_return", duration=5000)
             self.mood_engine.boost_mood(5)
             if self.pet_state == "sleep":
                 self.emotion_override = False
                 self.set_state("idle")
         if events["backspace_rage"]:
-            self.say_random("backspace_rage", duration=4000)
+            self.say_random("backspace_rage", duration=5000)
             self.mood_engine.drain_mood(5)
         elif events["burst"]:
-            self.say_random("burst", duration=2500)
+            self.say_random("burst", duration=5000)
             self.mood_engine.boost_energy(3)
         elif events["pause"]:
             if random.random() < 0.3:
-                self.say_random("thinking_pause", duration=3000)
+                self.say_random("thinking_pause", duration=5000)
 
     # ==========================================================
     #  PHYSICS (multi-monitor aware)
@@ -755,6 +1144,7 @@ class DesktopPet(QWidget):
             new_y = self.y() + self.gravity_speed
             if new_y >= self.floor_y:
                 self.move(self.x(), self.floor_y)
+                self._sfx.play("bounce")
                 self.set_state("idle")
             else:
                 self.move(self.x(), new_y)
@@ -846,11 +1236,13 @@ class DesktopPet(QWidget):
         self.typing_analyzer.record_key(key_name)
         # v3: track total keys for achievements
         self.stats.data["total_keys"] = self.stats.data.get("total_keys", 0) + 1
+        # v14: keyboard heatmap
+        self._kb_heatmap.record_keys(1)
 
         if self.pet_state == "sleep":
             self.emotion_override = False
             self.set_state("idle")
-            self.say_random("wakeup", duration=2000)
+            self.say_random("wakeup", duration=5000)
 
     def analyze_typing_speed(self):
         kps = self.keystroke_count
@@ -869,8 +1261,349 @@ class DesktopPet(QWidget):
                 self.say("Zzz...")
 
     # ==========================================================
-    #  AUTO MUSIC DETECTION (v4.1 — runs on its own timer)
+    #  ACCESSORY / TOOL SYSTEM  (v5 — visual overlays)
     # ==========================================================
+    # Maps context/activity → accessory name
+    _CONTEXT_ACCESSORY_MAP: dict[str, str] = {
+        "coding":  "glasses",
+        "design":  "beret",
+        "gaming":  "controller",
+        "video":   "popcorn",
+        "browser": "magnifier",
+    }
+    _STATE_ACCESSORY_MAP: dict[str, str] = {
+        "sleep":   "sleep_mask",
+        "snore":   "sleep_mask",
+        "pray":    "tasbeeh",
+        "work":    "glasses",
+        "type_code": "glasses",
+        "read_book": "glasses",
+        "screenshot": "camera",
+        "notification": "megaphone",
+        "carry":   "hardhat",
+        "music_listen": "headphones",
+        "play_music":   "headphones",
+    }
+
+    def _get_accessory_pixmap(self, name: str) -> QPixmap:
+        """Return (cached) pixmap for an accessory drawn with QPainter."""
+        if name in self._accessory_cache:
+            return self._accessory_cache[name]
+        draw_fn = getattr(self, f"_draw_{name}", None)
+        if not draw_fn:
+            return QPixmap()
+        size = self.pet_width
+        pm = QPixmap(size, size)
+        pm.fill(QColor(0, 0, 0, 0))
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        draw_fn(p, size)
+        p.end()
+        self._accessory_cache[name] = pm
+        return pm
+
+    def equip_accessory(self, name: str):
+        """Show an accessory overlay on the pet."""
+        if name == self._current_accessory and self._accessory_label.isVisible():
+            return
+        pm = self._get_accessory_pixmap(name)
+        if pm.isNull():
+            return
+        self._current_accessory = name
+        self._accessory_label.setPixmap(pm)
+        self._accessory_label.raise_()
+        self._accessory_label.show()
+
+    def unequip_accessory(self):
+        """Remove the current accessory overlay."""
+        self._current_accessory = ""
+        self._accessory_label.hide()
+
+    def _auto_equip_for_state(self, state: str):
+        """Automatically pick the right accessory for a pet state."""
+        acc = self._STATE_ACCESSORY_MAP.get(state)
+        if acc:
+            self.equip_accessory(acc)
+        elif self._current_accessory and self._current_accessory not in ("headphones",):
+            # Don't strip headphones (managed by music detector)
+            self.unequip_accessory()
+
+    def _auto_equip_for_context(self, category: str):
+        """Automatically pick the right accessory for detected OS context."""
+        acc = self._CONTEXT_ACCESSORY_MAP.get(category)
+        if acc:
+            self.equip_accessory(acc)
+
+    # ---------- individual accessory painters ----------
+
+    def _draw_headphones(self, p: QPainter, size: int):
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QPen
+        pen = QPen(QColor(50, 50, 50), 5)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        p.setPen(pen)
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.drawArc(QRectF(20, 2, 60, 40), 0 * 16, 180 * 16)
+        p.setPen(Qt.PenStyle.NoPen)
+        # Left earpiece
+        p.setBrush(QColor(60, 60, 60)); p.drawRoundedRect(14, 22, 18, 24, 6, 6)
+        p.setBrush(QColor(90, 90, 90)); p.drawRoundedRect(16, 25, 14, 18, 4, 4)
+        p.setBrush(QColor(130, 130, 130, 80)); p.drawRoundedRect(18, 27, 5, 10, 2, 2)
+        # Right earpiece
+        p.setBrush(QColor(60, 60, 60)); p.drawRoundedRect(68, 22, 18, 24, 6, 6)
+        p.setBrush(QColor(90, 90, 90)); p.drawRoundedRect(70, 25, 14, 18, 4, 4)
+        p.setBrush(QColor(130, 130, 130, 80)); p.drawRoundedRect(72, 27, 5, 10, 2, 2)
+
+    def _draw_glasses(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        pen = QPen(QColor(40, 40, 40), 3)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        p.setPen(pen)
+        p.setBrush(QColor(180, 220, 255, 60))
+        # Left lens
+        p.drawRoundedRect(22, 32, 22, 18, 5, 5)
+        # Right lens
+        p.drawRoundedRect(56, 32, 22, 18, 5, 5)
+        # Bridge
+        p.drawLine(44, 40, 56, 40)
+        # Left arm
+        p.drawLine(22, 38, 10, 34)
+        # Right arm
+        p.drawLine(78, 38, 90, 34)
+
+    def _draw_beret(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        p.setPen(Qt.PenStyle.NoPen)
+        # Beret body
+        p.setBrush(QColor(180, 50, 50))
+        p.drawEllipse(25, 2, 55, 30)
+        # Beret brim
+        p.setBrush(QColor(140, 35, 35))
+        p.drawRoundedRect(23, 22, 50, 8, 4, 4)
+        # Bobble on top
+        p.setBrush(QColor(200, 70, 70))
+        p.drawEllipse(48, 0, 10, 10)
+        # Highlight
+        p.setBrush(QColor(220, 100, 100, 80))
+        p.drawEllipse(35, 6, 20, 12)
+
+    def _draw_controller(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        p.setPen(Qt.PenStyle.NoPen)
+        # Controller body
+        p.setBrush(QColor(50, 50, 70))
+        p.drawRoundedRect(25, 70, 50, 22, 8, 8)
+        # Grips
+        p.setBrush(QColor(40, 40, 60))
+        p.drawRoundedRect(18, 75, 14, 18, 5, 5)
+        p.drawRoundedRect(68, 75, 14, 18, 5, 5)
+        # D-pad (left side)
+        p.setBrush(QColor(80, 80, 100))
+        p.drawRect(33, 77, 3, 10)
+        p.drawRect(30, 80, 9, 3)
+        # Buttons (right side — colored dots)
+        p.setBrush(QColor(220, 60, 60)); p.drawEllipse(58, 76, 5, 5)   # red
+        p.setBrush(QColor(60, 160, 60)); p.drawEllipse(64, 80, 5, 5)   # green
+        p.setBrush(QColor(60, 100, 220)); p.drawEllipse(58, 84, 5, 5)  # blue
+        p.setBrush(QColor(220, 200, 50)); p.drawEllipse(52, 80, 5, 5)  # yellow
+        # Analog sticks
+        p.setBrush(QColor(100, 100, 120))
+        p.drawEllipse(36, 86, 6, 6)
+        p.drawEllipse(56, 86, 6, 6)
+
+    def _draw_sleep_mask(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        p.setPen(Qt.PenStyle.NoPen)
+        # Mask band
+        p.setBrush(QColor(60, 40, 100))
+        p.drawRoundedRect(12, 32, 76, 18, 8, 8)
+        # Eye covers
+        p.setBrush(QColor(80, 55, 130))
+        p.drawEllipse(20, 33, 24, 16)
+        p.drawEllipse(56, 33, 24, 16)
+        # Zzz text
+        from PyQt6.QtGui import QFont
+        p.setPen(QColor(200, 180, 255, 200))
+        font = QFont("Arial", 8, QFont.Weight.Bold)
+        p.setFont(font)
+        p.drawText(78, 28, "z")
+        font.setPointSize(10)
+        p.setFont(font)
+        p.drawText(84, 20, "Z")
+        font.setPointSize(12)
+        p.setFont(font)
+        p.drawText(88, 10, "Z")
+
+    def _draw_tasbeeh(self, p: QPainter, size: int):
+        from PyQt6.QtCore import QRectF
+        from PyQt6.QtGui import QPen
+        import math
+        # Prayer beads in a loop at bottom-right (held in hand)
+        cx, cy, r = 74, 78, 12
+        bead_r = 3
+        p.setPen(Qt.PenStyle.NoPen)
+        for i in range(12):
+            angle = math.radians(i * 30)
+            bx = cx + r * math.cos(angle)
+            by = cy + r * math.sin(angle)
+            col = QColor(120, 80, 40) if i % 3 else QColor(160, 120, 60)
+            p.setBrush(col)
+            p.drawEllipse(int(bx - bead_r), int(by - bead_r), bead_r * 2, bead_r * 2)
+        # Tassel
+        pen = QPen(QColor(100, 60, 30), 2)
+        p.setPen(pen)
+        p.drawLine(cx, cy - r - 2, cx, cy - r - 12)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(140, 100, 50))
+        p.drawEllipse(cx - 3, cy - r - 14, 6, 6)
+
+    def _draw_camera(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        p.setPen(Qt.PenStyle.NoPen)
+        # Camera body
+        p.setBrush(QColor(50, 50, 55))
+        p.drawRoundedRect(30, 68, 40, 26, 5, 5)
+        # Viewfinder bump
+        p.setBrush(QColor(60, 60, 65))
+        p.drawRoundedRect(42, 63, 16, 8, 3, 3)
+        # Lens
+        p.setBrush(QColor(30, 30, 35))
+        p.drawEllipse(40, 72, 20, 20)
+        p.setBrush(QColor(60, 90, 140))
+        p.drawEllipse(44, 76, 12, 12)
+        # Lens glare
+        p.setBrush(QColor(200, 200, 255, 100))
+        p.drawEllipse(47, 78, 4, 4)
+        # Flash
+        p.setBrush(QColor(255, 220, 100))
+        p.drawEllipse(62, 69, 6, 6)
+        # Strap hints
+        pen = QPen(QColor(80, 80, 80), 2)
+        p.setPen(pen)
+        p.drawLine(30, 75, 22, 70)
+        p.drawLine(70, 75, 78, 70)
+
+    def _draw_popcorn(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        p.setPen(Qt.PenStyle.NoPen)
+        # Bucket
+        p.setBrush(QColor(200, 40, 40))
+        pts = [
+            (60, 68), (80, 68), (78, 95), (62, 95)
+        ]
+        from PyQt6.QtGui import QPolygon
+        from PyQt6.QtCore import QPoint as QP
+        poly = QPolygon([QP(x, y) for x, y in pts])
+        p.drawPolygon(poly)
+        # Stripes
+        pen = QPen(QColor(230, 230, 230), 2)
+        p.setPen(pen)
+        p.drawLine(66, 68, 65, 95)
+        p.drawLine(74, 68, 73, 95)
+        # Popcorn kernels overflowing
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(255, 245, 200))
+        for kx, ky in [(62, 64), (68, 60), (75, 62), (72, 56), (65, 58), (78, 66)]:
+            p.drawEllipse(kx, ky, 7, 6)
+        # Kernel shadows
+        p.setBrush(QColor(230, 210, 150, 100))
+        for kx, ky in [(63, 65), (69, 61), (76, 63)]:
+            p.drawEllipse(kx, ky, 4, 3)
+
+    def _draw_magnifier(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        # Handle
+        pen = QPen(QColor(120, 80, 40), 4)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        p.setPen(pen)
+        p.drawLine(80, 90, 68, 78)
+        # Glass ring
+        pen = QPen(QColor(160, 140, 100), 3)
+        p.setPen(pen)
+        p.setBrush(QColor(200, 230, 255, 60))
+        p.drawEllipse(52, 60, 24, 24)
+        # Glare
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(255, 255, 255, 100))
+        p.drawEllipse(57, 64, 6, 6)
+
+    def _draw_megaphone(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen, QPolygon
+        from PyQt6.QtCore import QPoint as QP
+        p.setPen(Qt.PenStyle.NoPen)
+        # Cone
+        p.setBrush(QColor(220, 160, 40))
+        cone = QPolygon([QP(60, 72), QP(88, 62), QP(88, 88), QP(60, 82)])
+        p.drawPolygon(cone)
+        # Mouth piece
+        p.setBrush(QColor(180, 130, 30))
+        p.drawRoundedRect(54, 70, 10, 14, 3, 3)
+        # Bell opening
+        p.setBrush(QColor(200, 150, 40))
+        p.drawEllipse(84, 62, 8, 26)
+        # Handle
+        p.setBrush(QColor(100, 70, 30))
+        p.drawRoundedRect(58, 84, 8, 10, 2, 2)
+
+    def _draw_hardhat(self, p: QPainter, size: int):
+        from PyQt6.QtGui import QPen
+        p.setPen(Qt.PenStyle.NoPen)
+        # Hat dome
+        p.setBrush(QColor(240, 200, 40))
+        p.drawEllipse(22, 2, 56, 30)
+        # Brim
+        p.setBrush(QColor(220, 180, 30))
+        p.drawRoundedRect(18, 22, 64, 8, 4, 4)
+        # Center ridge
+        p.setBrush(QColor(250, 220, 80))
+        p.drawRoundedRect(46, 2, 8, 24, 3, 3)
+        # Highlight
+        p.setBrush(QColor(255, 240, 150, 100))
+        p.drawEllipse(30, 6, 18, 12)
+
+    # Legacy compatibility wrappers
+    def _show_headphones(self):
+        self.equip_accessory("headphones")
+
+    def _hide_headphones(self):
+        if self._current_accessory == "headphones":
+            self.unequip_accessory()
+
+    # ---------- Cosmetic accessory painters (wardrobe) ----------
+    # Delegated to features/accessory_drawer.py for maintainability.
+    # _get_accessory_pixmap calls getattr(self, f"_draw_{name}", None),
+    # so we register thin wrappers for each cosmetic item.
+
+    def _draw_crown(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["crown"](p, size)
+
+    def _draw_party_hat(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["party_hat"](p, size)
+
+    def _draw_bow_tie(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["bow_tie"](p, size)
+
+    def _draw_wizard_hat(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["wizard_hat"](p, size)
+
+    def _draw_cape(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["cape"](p, size)
+
+    def _draw_flower(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["flower"](p, size)
+
+    def _draw_star_badge(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["star_badge"](p, size)
+
+    def _draw_sunglasses(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["sunglasses"](p, size)
+
+    def _draw_halo(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["halo"](p, size)
+
+    def _draw_pirate_hat(self, p: QPainter, size: int):
+        COSMETIC_DRAWERS["pirate_hat"](p, size)
+
     def _auto_detect_music(self):
         """Scans ALL open windows for music playback — runs every 2s independently."""
         try:
@@ -880,6 +1613,7 @@ class DesktopPet(QWidget):
 
         if music_info["just_started"]:
             self._music_playing = True
+            self._show_headphones()
             # Switch to play_music or music_listen animation
             music_anim = random.choice(
                 [a for a in ("play_music", "music_listen") if a in self.animations]
@@ -890,16 +1624,19 @@ class DesktopPet(QWidget):
             if track and len(track) < 50:
                 self.say(f"\u266b {track}", duration=4000)
             else:
-                self.say_random("music_detected", duration=3000)
+                self.say_random("music_detected", duration=5000)
             self.mood_engine.boost_mood(10)
 
         elif music_info["just_stopped"]:
             self._music_playing = False
-            self.say_random("music_stopped", duration=2500)
+            self._hide_headphones()
+            self.say_random("music_stopped", duration=5000)
             self.set_state("idle")
 
         elif music_info["is_playing"] and self._music_playing:
-            # Keep music animation while music plays
+            # Keep headphones visible and music animation going
+            if self._current_accessory != "headphones":
+                self._show_headphones()
             if self.pet_state not in ("music_listen", "play_music", "dance", "smile", "dragging", "falling"):
                 music_anim = random.choice(
                     [a for a in ("play_music", "music_listen") if a in self.animations]
@@ -918,6 +1655,12 @@ class DesktopPet(QWidget):
 
     def _on_window_scan_result(self, title: str):
         """Handle the scanned window title on the main thread."""
+        title_lower = title.lower() if title else ""
+        # v14: meeting detection
+        self._meeting_detector.check_window(title_lower)
+        # v14: app time tracking
+        if title:
+            self._app_time_tracker.switch_app(title)
         self.check_os_context(title)
 
     def check_os_context(self, title: str = ""):
@@ -929,6 +1672,11 @@ class DesktopPet(QWidget):
                 if self.pet_state == "work":
                     self.set_state("idle")
                 self.mood_engine.set_context_category("")
+                if self._current_accessory != "headphones":
+                    self.unequip_accessory()
+                # Stop any active session chains
+                for cid in list(self.reaction_engine._active_chains):
+                    self.reaction_engine.stop_chain(cid)
                 return
             title_lower = title.lower()
             self.mood_engine.record_app_switch(title_lower)
@@ -936,13 +1684,45 @@ class DesktopPet(QWidget):
             # v4: track website visits from browser windows
             self.web_tracker.record_window(title_lower)
 
+            # Startled by rapid app switching
+            startled_msg = self.reaction_engine.on_app_switch()
+            if startled_msg:
+                self.say(startled_msg, duration=3000, force=True)
+
             category = self._categorize_window(title_lower)
             self.mood_engine.set_context_category(category)
+            self._auto_equip_for_context(category)
+
+            # Manage reaction chains based on category
+            chain_map = {
+                "coding": "coding_session",
+                "design": "design_session",
+                "gaming": "gaming_session",
+                "video": "video_session",
+                "browser": "browser_session",
+            }
+            active_chain = chain_map.get(category)
+            # Start the matching chain, stop others
+            for cat, cid in chain_map.items():
+                if cat == category:
+                    self.reaction_engine.start_chain(cid)
+                else:
+                    self.reaction_engine.stop_chain(cid)
+
+            # Late-night chain
+            hour = datetime.now().hour
+            if hour >= 23 or hour < 4:
+                self.reaction_engine.start_chain("late_night")
+            else:
+                self.reaction_engine.stop_chain("late_night")
 
             if category == "coding":
                 self.set_state("work")
                 if not self.settings.get("focus_mode"):
                     self.say_random("coding")
+                # Auto-detect git repo from window title
+                if self._code_companion:
+                    self._code_companion.detect_repo_from_window(title)
             elif category == "design":
                 self.set_state("work")
                 if not self.settings.get("focus_mode"):
@@ -964,6 +1744,16 @@ class DesktopPet(QWidget):
                 if self.pet_state == "work":
                     self.set_state("idle")
 
+            # Deep context-aware window commentary
+            if not self.settings.get("focus_mode"):
+                comment = self.reaction_engine.get_window_comment(title)
+                if comment:
+                    # Use AI to deliver it in character if available
+                    if self.ai_brain.is_available and self.settings.get("enable_ai"):
+                        self._ai_react(f"I noticed the user is on: {title[:50]}. Comment: {comment}")
+                    else:
+                        self.say(comment, duration=4000)
+
             if self.mood_engine.is_switching_too_fast():
                 now = time.time()
                 if now - self._last_distraction_warn > 120:
@@ -974,27 +1764,19 @@ class DesktopPet(QWidget):
             self.hide_bubble()
 
     def _categorize_window(self, title: str) -> str:
-        coding_kw = ("code", "pycharm", "gym engine", "openclaw", "visual studio",
-                     "intellij", "neovim", "sublime", "atom", "terminal", "powershell",
-                     "cmd.exe", "git")
-        design_kw = ("refreshyourpassionapp", "motiv8", "photoshop", "figma",
-                     "illustrator", "canva", "sketch", "blender")
-        video_kw  = ("youtube", "netflix", "twitch", "vlc", "mpv", "plex")
-        browser_kw = ("chrome", "firefox", "edge", "brave", "opera", "safari")
-        gaming_kw  = ("steam", "epic games", "minecraft", "valorant", "discord")
-        for kw in coding_kw:
+        for kw in _CODING_KW:
             if kw in title:
                 return "coding"
-        for kw in design_kw:
+        for kw in _DESIGN_KW:
             if kw in title:
                 return "design"
-        for kw in video_kw:
+        for kw in _VIDEO_KW:
             if kw in title:
                 return "video"
-        for kw in gaming_kw:
+        for kw in _GAMING_KW:
             if kw in title:
                 return "gaming"
-        for kw in browser_kw:
+        for kw in _BROWSER_KW:
             if kw in title:
                 return "browser"
         return "other"
@@ -1004,36 +1786,57 @@ class DesktopPet(QWidget):
     # ==========================================================
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            # If tasbeeh accessory is active, increment counter instead of petting
+            if self._current_accessory == "tasbeeh":
+                self._tasbeeh_click()
+                return
+
             self.emotion_override = True
             self.mood_engine.pet_interaction()
+            self._sfx.play("pet")
 
             # v3: combo tracking
             combo = self.combo_tracker.register_click()
             self.stats.data["total_pets"] = self.stats.data.get("total_pets", 0) + 1
 
             if combo >= 4:
-                self.say_random("pet_combo_4plus", duration=3000)
+                self.say_random("pet_combo_4plus", duration=5000)
                 self.mood_engine.boost_mood(25)
                 if "dance" in self.animations:
                     self.set_state("dance")
                 else:
                     self.set_state("smile")
             elif combo == 3:
-                self.say_random("pet_combo_3", duration=3000)
+                self.say_random("pet_combo_3", duration=5000)
                 self.mood_engine.boost_mood(20)
                 self.set_state("smile")
                 self.achievement_engine.check_combo(combo)
             elif combo == 2:
-                self.say_random("pet_combo_2", duration=3000)
+                self.say_random("pet_combo_2", duration=5000)
                 self.mood_engine.boost_mood(10)
                 self.set_state("smile")
             else:
-                # Single pet — occasionally use AI for a smarter response
+                # Staged mood contagion — pet reacts based on current mood level
+                contagion = self.reaction_engine.on_pet_interaction(self.mood_engine.mood)
+                self.mood_engine.boost_mood(contagion["mood_boost"])
                 if self.ai_brain.is_available and random.random() < 0.3:
-                    self._ai_react("The user just petted/clicked on me lovingly")
+                    self._ai_react(f"User petted me! I'm in stage '{contagion['stage']}'. React: {contagion['reaction_text']}")
                 else:
-                    self.say_random("pet", duration=3000)
-                self.set_state("smile")
+                    self.say(contagion["reaction_text"], duration=5000)
+
+                # Visual: escalate from current mood state
+                if contagion["stage"] in ("healed", "maximum", "ecstatic"):
+                    if "dance" in self.animations:
+                        self.set_state("dance")
+                    else:
+                        self.set_state("smile")
+                elif contagion["stage"] in ("sad",):
+                    if "sad" in self.animations:
+                        self.set_state("sad")
+                    else:
+                        self.set_state("idle")
+                else:
+                    self.set_state("smile")
 
             QTimer.singleShot(3000, self.end_emotion)
 
@@ -1049,9 +1852,11 @@ class DesktopPet(QWidget):
         now = time.time()
         cooldown = self.settings.get("speech_cooldown_sec")
         if not force:
-            if text == self._last_speech_text and (now - self._last_speech_time) < cooldown:
+            # Queue if a bubble is currently showing
+            if now < self._bubble_expires_at:
+                self._speech_queue.append((text, duration))  # deque(maxlen=8) auto-drops oldest
                 return
-            if (now - self._last_speech_time) < cooldown * 0.4:
+            if text == self._last_speech_text and (now - self._last_speech_time) < cooldown:
                 return
 
             hour = time.localtime().tm_hour
@@ -1072,15 +1877,29 @@ class DesktopPet(QWidget):
         self.bubble.setText(text)
         self.bubble.adjustSize()
         bubble_x = 75 + (self.pet_width // 2) - (self.bubble.width() // 2)
+        bubble_x = max(2, min(bubble_x, self.width() - self.bubble.width() - 2))
         self.bubble.move(bubble_x, max(5, 70 - self.bubble.height()))
         self.bubble.show()
-        # Fade in
+        # Fade in — disconnect any leftover hide signal from previous fade-out
         self._bubble_fade.stop()
+        try:
+            self._bubble_fade.finished.disconnect()
+        except TypeError:
+            pass
         self._bubble_fade.setStartValue(0.0)
         self._bubble_fade.setEndValue(1.0)
         self._bubble_fade.start()
+
+        # Calculate how long to show this bubble
+        min_dur = self.settings.get("bubble_min_duration_ms")
         if duration > 0:
-            self._bubble_timer.start(duration)
+            show_dur = max(duration, min_dur)
+        else:
+            # Auto-calculate from text length: 80ms per char + base
+            chars = len(text)
+            show_dur = max(min_dur, 4000 + chars * 80)
+        self._bubble_timer.start(show_dur)
+        self._bubble_expires_at = now + show_dur / 1000.0
 
     def say_random(self, pool_key, duration=0, **fmt):
         lines = SPEECH_POOL.get(pool_key, [])
@@ -1109,7 +1928,11 @@ class DesktopPet(QWidget):
             text = text.format(**fmt)
         self.say(text, duration=duration)
 
-    def hide_bubble(self):
+    def hide_bubble(self, force=False):
+        # Don't hide if the bubble hasn't expired yet (unless forced/timer-triggered)
+        if not force and time.time() < self._bubble_expires_at:
+            return
+        self._bubble_expires_at = 0.0
         self._bubble_timer.stop()
         self._bubble_fade.stop()
         self._bubble_fade.setStartValue(self._bubble_opacity.opacity())
@@ -1121,6 +1944,13 @@ class DesktopPet(QWidget):
         self._bubble_fade.finished.connect(self.bubble.hide)
         self._bubble_fade.start()
 
+    def _on_bubble_expired(self):
+        """Called when bubble timer fires — hide current, show next queued."""
+        self.hide_bubble(force=True)
+        if self._speech_queue:
+            text, dur = self._speech_queue.popleft()
+            QTimer.singleShot(400, lambda: self.say(text, duration=dur))
+
     # ==========================================================
     #  WELCOME (v3: + time-of-day greeting)
     # ==========================================================
@@ -1131,11 +1961,18 @@ class DesktopPet(QWidget):
             QTimer.singleShot(3000, lambda: self.set_state("idle"))
         msg = self.stats.get_welcome_message()
         self.say(msg, duration=4000)
-        # Time-of-day greeting after welcome fades
+
+        # Multi-phase greeting sequence (replaces simple tod greeting)
         if self.settings.get("enable_time_awareness") and not self._tod_greeted:
             self._tod_greeted = True
-            tod = self.mood_engine.get_time_of_day_label()
-            QTimer.singleShot(5000, lambda: self.say_random(tod, duration=3000))
+            # Phase 0 after welcome fades, then phases chain themselves
+            self._greeting_phase = 0
+            QTimer.singleShot(6000, self._do_multi_phase_greeting)
+
+        # Seasonal/holiday check on startup
+        holiday = self.reaction_engine.check_seasonal_greeting()
+        if holiday:
+            QTimer.singleShot(15000, lambda: self.say(holiday, duration=6000))
 
     # ==========================================================
     #  POMODORO
@@ -1146,22 +1983,24 @@ class DesktopPet(QWidget):
         self.pomodoro_is_break = False
         self.pomodoro_remaining = work_min * 60
         self._pomodoro_timer.start(1000)
-        self.say(f"Pomodoro started! {work_min} min focus.", duration=3000)
+        self.say(f"Pomodoro started! {work_min} min focus.", duration=5000)
 
     def stop_pomodoro(self):
         self.pomodoro_active = False
         self._pomodoro_timer.stop()
-        self.say("Pomodoro cancelled.", duration=2000)
+        self.say("Pomodoro cancelled.", duration=5000)
 
     def _pomodoro_tick(self):
         if not self.pomodoro_active:
             return
         self.pomodoro_remaining -= 1
+        self.update()  # repaint pomodoro ring
         if self.pomodoro_remaining <= 0:
             if self.pomodoro_is_break:
                 self.say_random("pomodoro_break_done", duration=5000)
                 self.pomodoro_active = False
                 self._pomodoro_timer.stop()
+                self.update()  # clear ring
             else:
                 self.say_random("pomodoro_done", duration=5000)
                 self.mood_engine.boost_energy(10)
@@ -1252,6 +2091,8 @@ class DesktopPet(QWidget):
         if not self.ai_brain.is_available:
             return
 
+        self.say("💭 Thinking...", duration=2000)
+
         def callback(reply):
             if reply:
                 self._ai_chat_signal.response_ready.emit(reply)
@@ -1263,6 +2104,112 @@ class DesktopPet(QWidget):
         suggestion = self.daily_briefing.get_proactive_suggestion(self._get_ai_context())
         if suggestion:
             self.say(suggestion, duration=8000)
+
+    # ==========================================================
+    #  DYNAMIC REACTION ENGINE INTEGRATION
+    # ==========================================================
+    def _cursor_awareness_tick(self):
+        """Fast timer (100ms) — tracks cursor for eye direction & startled."""
+        cursor = QCursor.pos()
+        result = self.reaction_engine.track_cursor(
+            cursor.x(), cursor.y(), self.x() + self.width() // 2, self.y() + self.height() // 2,
+        )
+        if not result:
+            return
+
+        # Startled by fast cursor zoom-by
+        if result.get("type") == "startled_cursor" and not self.emotion_override:
+            self.emotion_override = True
+            self.say(random.choice([
+                "*jumps* WHOAA that was fast!! 😱",
+                "*ducks* Don't scare me like that! 💫",
+                "ZOOM! Was that the cursor or a rocket?! 🚀",
+            ]), duration=3000, force=True)
+            if "stretch" in self.animations:
+                self.set_state("stretch")
+            QTimer.singleShot(3000, self.end_emotion)
+
+        # Curious when cursor lingers near pet
+        elif result.get("type") == "curious" and not self.emotion_override:
+            if random.random() < 0.02:  # Don't spam — ~2% per 100ms tick while lingering
+                self.say(random.choice([
+                    "Hmm? What are you looking at? 👀",
+                    "*stares back* ...hi! 😊",
+                    "Poke me! Go on~ 🐾",
+                    "I can feel you watching me~ 👁️",
+                ]), duration=5000)
+
+    def _reaction_tick(self):
+        """3s timer — handles chains, fidgets, comedy, dreams, seasonal."""
+        if self.emotion_override:
+            return
+
+        re = self.reaction_engine
+
+        # Reaction chain progression
+        events = re.tick()
+        for ev in events:
+            if ev.get("text"):
+                self.say(ev["text"], duration=5000)
+
+        # Dream bubbles while sleeping
+        if self.pet_state == "sleep":
+            dream = re.get_dream_bubble()
+            if dream:
+                self.say(dream, duration=4000, force=True)
+            return  # Skip other reactions while sleeping
+
+        # Idle fidgets
+        if self.pet_state in ("idle", "sit"):
+            fidget = re.get_idle_fidget()
+            if fidget:
+                self._do_fidget(fidget)
+
+        # Physical comedy (rare random event)
+        comedy = re.try_comedy_event()
+        if comedy:
+            self.say(comedy["text"], duration=4000)
+            state = comedy.get("state")
+            if state and state in self.animations:
+                self.emotion_override = True
+                self.set_state(state)
+                QTimer.singleShot(4000, self.end_emotion)
+
+    def _do_fidget(self, fidget_type: str):
+        """Execute a fidget micro-expression."""
+        if fidget_type in ("blink", "slow_blink"):
+            # Quick blink via brief state change
+            pass  # No visible change needed — just a concept slot
+        elif fidget_type == "look_around":
+            if not self.settings.get("focus_mode"):
+                self.say(random.choice([
+                    "*looks around* 👀",
+                    "*peeks left and right* 🔍",
+                ]), duration=5000)
+        elif fidget_type in ("tail_wag", "bounce"):
+            if "smile" in self.animations and random.random() < 0.4:
+                self.set_state("smile")
+                QTimer.singleShot(2000, lambda: self.set_state("idle") if not self.emotion_override else None)
+        elif fidget_type in ("sigh", "droop"):
+            if not self.settings.get("focus_mode"):
+                self.say(random.choice(["*sigh* 😔", "*droopy eyes* 😪"]), duration=5000)
+        elif fidget_type == "yawn_small":
+            if "yawn" in self.animations:
+                self.set_state("yawn")
+                QTimer.singleShot(2000, lambda: self.set_state("idle") if not self.emotion_override else None)
+        elif fidget_type == "shift":
+            pass  # Subtle position shift placeholder
+
+    def _do_multi_phase_greeting(self):
+        """Advance the multi-phase greeting sequence."""
+        msg = self.reaction_engine.get_greeting_phase(self._greeting_phase)
+        if msg:
+            self.say(msg, duration=5000)
+            self._greeting_phase += 1
+            # Schedule next phase
+            if self._greeting_phase < 5:
+                QTimer.singleShot(8000, self._do_multi_phase_greeting)
+        # else: greeting sequence done
 
     def _configure_ai(self):
         """Show dialog to configure AI model settings."""
@@ -1289,9 +2236,9 @@ class DesktopPet(QWidget):
         self.settings.set("enable_ai", not current)
         if not current:
             self.ai_brain.refresh_status()
-            self.say("AI Brain activated! 🧠✨", duration=3000)
+            self.say("AI Brain activated! 🧠✨", duration=5000)
         else:
-            self.say("AI Brain deactivated. Using classic mode.", duration=3000)
+            self.say("AI Brain deactivated. Using classic mode.", duration=5000)
 
     # ==========================================================
     #  v6: QUICK ACTIONS (Screenshot, Run App, Shutdown, Restart)
@@ -1327,7 +2274,7 @@ class DesktopPet(QWidget):
             self.say(f"\U0001f4f8 Screenshot saved!\n{os.path.basename(filepath)}", duration=4000)
             QTimer.singleShot(3000, self.end_emotion)
         except Exception as e:
-            self.say(f"Screenshot failed: {e}", duration=3000)
+            self.say(f"Screenshot failed: {e}", duration=5000)
 
     def _run_app_dialog(self):
         """Ask user for an app/command to run."""
@@ -1592,11 +2539,22 @@ class DesktopPet(QWidget):
 
         for notif in new:
             self._notif_log.append(notif)
+            # Feed into digest system
+            self._notif_digest.add(
+                app=notif.get("app", "Unknown"),
+                title=notif.get("title", ""),
+                body=notif.get("body", ""),
+            )
 
         # Keep only last 50 in the log
         if len(self._notif_log) > 50:
             self._notif_log = self._notif_log[-50:]
 
+        # In DND mode, don't show individual notifications
+        if self._notif_digest.is_dnd:
+            return
+
+        self._sfx.play("notification")
         # Show the most recent notification to the user
         latest = new[-1]
         app = latest["app"]
@@ -1618,6 +2576,11 @@ class DesktopPet(QWidget):
             display += f"\n(+{len(new) - 1} more)"
 
         self._show_notification_anim(display, duration=6000)
+
+        # Reaction engine may add a fun comment about the notification
+        reaction = self.reaction_engine.on_notification(title)
+        if reaction:
+            QTimer.singleShot(7000, lambda: self.say(reaction, duration=3000))
 
     def _show_notification_log(self):
         """Show a dialog with recent notifications."""
@@ -1700,6 +2663,53 @@ class DesktopPet(QWidget):
         dlg.exec()
 
     # ==========================================================
+    #  POMODORO RING — visual circular progress around the pet
+    # ==========================================================
+    def _paint_pomodoro_ring(self, painter: QPainter):
+        """Draw a circular arc around the pet showing pomodoro time remaining."""
+        cx = self.pet_label.x() + self.pet_width // 2
+        cy = self.pet_label.y() + self.pet_height // 2
+        radius = max(self.pet_width, self.pet_height) // 2 + 10
+        rect_x = cx - radius
+        rect_y = cy - radius
+        rect_size = radius * 2
+
+        # Calculate progress
+        total = (self.settings.get("pomodoro_break_min" if self.pomodoro_is_break
+                                   else "pomodoro_work_min") * 60)
+        progress = 1.0 - (self.pomodoro_remaining / max(total, 1))
+        span_angle = int(progress * 360 * 16)  # Qt uses 1/16 degree
+
+        # Colors: blue for work, green for break
+        if self.pomodoro_is_break:
+            ring_color = QColor(80, 200, 120, 180)
+            bg_color = QColor(80, 200, 120, 40)
+        else:
+            ring_color = QColor(80, 140, 255, 180)
+            bg_color = QColor(80, 140, 255, 40)
+
+        from PyQt6.QtGui import QPen
+        # Background ring
+        painter.setPen(QPen(bg_color, 4))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(rect_x, rect_y, rect_size, rect_size)
+
+        # Progress arc (starts at 12 o'clock = 90° in Qt coords)
+        painter.setPen(QPen(ring_color, 4))
+        painter.drawArc(rect_x, rect_y, rect_size, rect_size,
+                        90 * 16, -span_angle)
+
+        # Time remaining text
+        mins = self.pomodoro_remaining // 60
+        secs = self.pomodoro_remaining % 60
+        label = "Break" if self.pomodoro_is_break else "Focus"
+        painter.setPen(ring_color)
+        painter.setFont(QFont("Arial", 7, QFont.Weight.Bold))
+        painter.drawText(rect_x, rect_y - 6, rect_size, 14,
+                         Qt.AlignmentFlag.AlignCenter,
+                         f"{label} {mins}:{secs:02d}")
+
+    # ==========================================================
     #  PAINT — draw a nearly invisible rect over the pet area
     #  so Windows recognizes it as hittable (alpha > 0 required)
     # ==========================================================
@@ -1711,6 +2721,28 @@ class DesktopPet(QWidget):
             self.pet_label.width(), self.pet_label.height(),
             QColor(0, 0, 0, 1),
         )
+        # Pomodoro ring overlay
+        if self.pomodoro_active and self.pomodoro_remaining > 0:
+            self._paint_pomodoro_ring(painter)
+        # Focus mode indicator — subtle pulsing blue border
+        if self.settings.get("focus_mode"):
+            from PyQt6.QtGui import QPen
+            painter.setPen(QPen(QColor(80, 140, 255, 100), 2))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            cx = self.pet_label.x() + self.pet_width // 2
+            cy = self.pet_label.y() + self.pet_height // 2
+            r = max(self.pet_width, self.pet_height) // 2 + 4
+            painter.drawEllipse(cx - r, cy - r, r * 2, r * 2)
+            painter.setPen(QColor(80, 140, 255, 160))
+            painter.setFont(QFont("Segoe UI", 6))
+            painter.drawText(cx - 20, cy - r - 10, 40, 10,
+                             Qt.AlignmentFlag.AlignCenter, "🔒 Focus")
+        # Error indicator — red dot top-right of pet
+        if self._feature_errors:
+            painter.setBrush(QColor(220, 50, 50, 200))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(self.pet_label.x() + self.pet_width - 6,
+                                self.pet_label.y(), 12, 12)
         painter.end()
 
     # ==========================================================
@@ -1720,7 +2752,12 @@ class DesktopPet(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self._dragging = True
             self._drag_pos = event.globalPosition().toPoint() - self.pos()
+            self._sfx.play("click")
             self.set_state("dragging")
+        elif event.button() == Qt.MouseButton.MiddleButton:
+            # Middle-click → Quick Launcher Wheel
+            center = self.pos() + QPoint(self.width() // 2, self.height() // 2)
+            self._quick_launcher.show_at(center)
         elif event.button() == Qt.MouseButton.RightButton:
             self.show_context_menu(event.globalPosition().toPoint())
 
@@ -1738,394 +2775,856 @@ class DesktopPet(QWidget):
                 self.set_state("idle")
 
     # ==========================================================
+    #  FILE DROP ZONE (v11)
+    # ==========================================================
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls() and self.settings.get("enable_file_drop"):
+            event.acceptProposedAction()
+            self.say_random("file_dropped", duration=3000)
+
+    def dropEvent(self, event):
+        if not event.mimeData().hasUrls():
+            return
+        try:
+            paths = [url.toLocalFile() for url in event.mimeData().urls() if url.isLocalFile()]
+            if not paths:
+                return
+            results = self._file_drop.handle_drop(paths)
+            if not results:
+                return
+            # Show info about first file and execute default action
+            first = results[0]
+            info_text = f"📦 {first['name']} ({first['detail']})"
+            if first["actions"]:
+                action = first["actions"][0]
+                result_msg = self._file_drop.execute_action(first, action)
+                info_text += f"\n{result_msg}"
+            self.say(info_text, duration=6000, force=True)
+        except Exception as e:
+            log.warning("File drop error: %s", e)
+            self.say("📦 Oops, couldn't process that file!", duration=3000)
+
+    # ==========================================================
+    #  v11: FEATURE HANDLERS
+    # ==========================================================
+    def _on_clipboard_event(self, event):
+        if self.settings.get("focus_mode"):
+            return
+        pool_map = {
+            "color": "clipboard_color",
+            "error": "clipboard_error",
+            "url": "clipboard_url",
+            "code": "clipboard_code",
+        }
+        pool_key = pool_map.get(event.kind)
+        if pool_key:
+            self.say_random(pool_key, duration=4000)
+
+    def _on_system_health_alert(self, alert_type: str, message: str):
+        if self.settings.get("focus_mode"):
+            return
+        # Visual state changes based on system health
+        if alert_type == "cpu_high":
+            if "work" in self.animations:
+                self.set_state("work")
+            self.say(f"🔥 {message}", duration=5000, force=True)
+        elif alert_type == "battery_low":
+            if "sad" in self.animations:
+                self.set_state("sad")
+            self.say(f"🔋 {message}", duration=6000, force=True)
+        elif alert_type == "battery_critical":
+            self.say(f"⚠️ {message}", duration=8000, force=True)
+        elif alert_type == "battery_charging":
+            self.say(f"⚡ {message}", duration=4000)
+        elif alert_type == "disk_low":
+            self.say(f"💾 {message}", duration=5000, force=True)
+        else:
+            self.say(message, duration=4000)
+
+    def _edit_launcher(self):
+        dlg = LauncherEditDialog(self._quick_launcher, self)
+        dlg.exec()
+
+    def _show_note_archive(self):
+        dlg = StickyArchiveDialog(self._sticky_notes, self)
+        dlg.exec()
+
+    def _show_streak_calendar(self):
+        dlg = StreakCalendarDialog(self.stats, self.habit_tracker, self)
+        dlg.exec()
+
+    def _check_circadian(self):
+        """Detect phase transitions and announce them."""
+        circ = get_circadian_phase()
+        new_phase = circ["phase"]
+        if new_phase != self._circadian_phase:
+            self._circadian_phase = new_phase
+            comment = circadian_speech(new_phase)
+            if comment:
+                self.say(comment, duration=5000)
+
+    def _on_voice_command(self, action: str):
+        """Dispatch voice command actions."""
+        handlers = {
+            "screenshot":    self._take_screenshot,
+            "pomodoro":      self.start_pomodoro,
+            "stop_pomodoro": self.stop_pomodoro,
+            "sticky_notes":  self._sticky_notes.toggle_all,
+            "stats":         self._show_stats,
+            "dashboard":     self._toggle_dashboard,
+            "journal":       self._show_journal,
+            "weather":       lambda: self.say(
+                self._weather.get_display() if self._weather else "Weather not enabled",
+                duration=5000,
+            ),
+            "launcher":      lambda: self._quick_launcher.show_at(
+                self.pos() + QPoint(self.width() // 2, self.height() // 2)),
+            "habits":        lambda: self.say(self.habit_tracker.status(), duration=6000),
+            "todo":          self._toggle_todo_widget,
+            "sleep":         lambda: self.set_state("sleep"),
+            "wake":          lambda: self.set_state("idle"),
+        }
+        fn = handlers.get(action)
+        if fn:
+            self.say(f"🎤 Voice: {action}", duration=2000)
+            fn()
+
+    def _toggle_voice_commands(self):
+        on = not self.settings.get("enable_voice_commands")
+        self.settings.set("enable_voice_commands", on)
+        if on and self._voice.is_available():
+            self._voice.command_recognized.connect(self._on_voice_command)
+            self._voice.start()
+            self.say("🎤 Voice commands enabled! Say 'Hey Toty' to start.", duration=4000)
+        else:
+            self._voice.stop()
+            self.say("🎤 Voice commands disabled.", duration=3000)
+
+    def _show_wardrobe(self):
+        # Check for new unlocks first
+        newly = self._wardrobe.check_unlocks(self.stats, self.habit_tracker)
+        for item_id in newly:
+            name = next((n for i, n, *_ in WARDROBE_ITEMS if i == item_id), item_id)
+            self.say(f"🎉 New accessory unlocked: {name}!", duration=4000, force=True)
+
+        def _draw_preview(name: str) -> QPixmap:
+            return self._get_accessory_pixmap(name)
+
+        dlg = WardrobeDialog(self._wardrobe, _draw_preview, self)
+        dlg.accessory_changed.connect(self._on_wardrobe_change)
+        dlg.exec()
+
+    def _on_wardrobe_change(self, item_id: str):
+        if item_id:
+            self.equip_accessory(item_id)
+        else:
+            self.unequip_accessory()
+
+    def _on_quick_action(self, action: str):
+        """Handle quick launcher wheel actions."""
+        if action == "screenshot":
+            self._take_screenshot()
+        elif action == "pomodoro":
+            if self.pomodoro_active:
+                self.stop_pomodoro()
+            else:
+                self.start_pomodoro()
+        elif action == "todo":
+            self._toggle_todo_widget()
+        elif action == "chat":
+            self._open_ai_chat()
+        elif action == "tasbeeh":
+            self._open_tasbeeh_menu()
+        elif action == "organize":
+            self._manual_organize()
+        elif action == "focus":
+            self._toggle_focus_mode()
+        elif action == "stats":
+            self._show_stats()
+        elif action == "dashboard":
+            self._toggle_dashboard()
+        elif action.startswith("app:"):
+            app_path = action[4:]
+            self._launch_app(app_path)
+
+    def _on_notif_digest(self, text: str):
+        self.say(text, duration=8000, force=True)
+
+    def _on_sound_reaction(self, reaction_type: str, message: str):
+        if self.settings.get("focus_mode"):
+            return
+        if reaction_type == "startled":
+            self.emotion_override = True
+            self._sfx.play("startled")
+            if "excited" in self.animations:
+                self.set_state("excited")
+            self.say(message, duration=3000, force=True)
+            QTimer.singleShot(2000, self.end_emotion)
+        elif reaction_type == "sleepy":
+            if self.pet_state not in ("work", "dragging", "falling"):
+                self._sfx.play("yawn")
+                if "yawn" in self.animations:
+                    self.set_state("yawn")
+                self.say(message, duration=4000)
+        elif reaction_type == "vibing":
+            self._sfx.play("purr")
+            self.say(message, duration=3000)
+
+    def _on_code_companion_alert(self, alert_type: str, message: str):
+        if self.settings.get("focus_mode"):
+            return
+        self.say(f"🔧 {message}", duration=5000)
+
+    def _on_challenge_completed(self, text: str, xp: int):
+        self.say_random("challenge_complete", duration=5000)
+        self.say(f"🏆 {text}\n+{xp} XP!", duration=5000, force=True)
+        if self.settings.get("enable_xp_system"):
+            self.stats.data["xp"] = self.stats.data.get("xp", 0) + xp
+            self._update_xp_label()
+
+    def _on_evolution_unlocked(self, stage_name: str, level: int):
+        self._sfx.play("level_up")
+        self.say_random("evolution_unlocked", duration=5000)
+        self.say(f"✨ Evolved into: {stage_name}! (Lv.{level})", duration=6000, force=True)
+        if "dance" in self.animations:
+            self.emotion_override = True
+            self.set_state("dance")
+            QTimer.singleShot(4000, self.end_emotion)
+
+    # ==========================================================
+    #  v12: HOTKEY HANDLER
+    # ==========================================================
+    def _on_hotkey(self, action: str):
+        """Route global hotkey actions."""
+        actions = {
+            "launcher": lambda: self._quick_launcher.show_at(
+                self.pos() + QPoint(self.width() // 2, self.height() // 2)),
+            "sticky_note": lambda: self._sticky_notes.create_note(
+                pos=(self.x() + 80, self.y() - 150)),
+            "reminder": self._add_smart_reminder,
+            "screenshot": self._screenshot.start_capture,
+            "dashboard": self._toggle_dashboard,
+            "journal": self._show_journal,
+            "tasbeeh": self._open_tasbeeh_menu,
+            "clipboard_history": self._toggle_clipboard_history,
+            "timer": self._toggle_quick_timer,
+            "help": self._show_hotkey_help,
+        }
+        fn = actions.get(action)
+        if fn:
+            fn()
+
+    # ==========================================================
+    #  v12: SMART REMINDERS
+    # ==========================================================
+    def _on_smart_reminder(self, text: str, rid: int = 0):
+        self._sfx.play("alert")
+        self.say(text, duration=6000, force=True)
+        self._last_fired_reminder_rid = rid
+
+    def _add_smart_reminder(self):
+        text, ok = QInputDialog.getText(
+            self, "⏰ Quick Reminder",
+            "e.g. 'in 30 min push code' or 'at 14:00 meeting':"
+        )
+        if ok and text.strip():
+            r = self._smart_reminders.add_raw(text.strip())
+            if r:
+                self._sfx.play("notification")
+                self.say_random("reminder_set", duration=3000)
+            else:
+                self.say("❌ Couldn't parse time. Try 'in 30 min ...' or 'at HH:MM ...'",
+                         duration=5000, force=True)
+
+    # ==========================================================
+    #  v12: EYE CARE / HEALTH BREAKS
+    # ==========================================================
+    def _on_health_break(self, break_type: str, message: str):
+        if self.settings.get("focus_mode"):
+            return
+        self._sfx.play("alert")
+        self.say(message, duration=6000, force=True)
+        if self._tray:
+            self._tray.show_message("Health Break", message)
+
+    def _on_break_done(self, break_type: str):
+        self._sfx.play("happy")
+        self.say_random("break_done", duration=3000)
+
+    # ==========================================================
+    #  v12: AI SMART ACTIONS
+    # ==========================================================
+    def _show_smart_actions(self):
+        """Show AI action menu on clipboard text."""
+        clipboard = QApplication.clipboard()
+        text = clipboard.text() if clipboard else ""
+        if not text.strip():
+            self.say("📋 Copy some text first, then try Smart Actions!", duration=3000)
+            return
+        items = list(SMART_ACTIONS.values())
+        choice, ok = QInputDialog.getItem(
+            self, "🤖 AI Smart Actions", f"Text: {text[:50]}...\nChoose action:",
+            items, 0, False
+        )
+        if ok and choice:
+            action_key = [k for k, v in SMART_ACTIONS.items() if v == choice][0]
+            self.say(f"🤖 Processing: {choice}...", duration=3000)
+            self._smart_actions.run_action(action_key, text)
+
+    def _on_smart_action_result(self, action: str, result: str):
+        self._sfx.play("notification")
+        label = SMART_ACTIONS.get(action, action)
+        # Copy result to clipboard
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            clipboard.setText(result)
+        self.say(f"{label}:\n{result[:300]}\n\n📋 Copied!", duration=8000, force=True)
+
+    # ==========================================================
+    #  v12: WEATHER
+    # ==========================================================
+    def _weather_accessory(self, accessory: str):
+        if accessory in self._ACCESSORY_DRAW and not self._current_accessory:
+            self.equip_accessory(accessory)
+
+    # ==========================================================
+    #  v12: SCREENSHOT
+    # ==========================================================
+    def _on_screenshot(self, path: str):
+        self._sfx.play("notification")
+        self.say_random("screenshot_taken", duration=3000)
+
+    # ==========================================================
+    #  v12: DAILY JOURNAL
+    # ==========================================================
+    def _prompt_journal(self):
+        self._sfx.play("notification")
+        self.say_random("journal_prompt", duration=4000)
+
+    def _show_journal(self):
+        dlg = JournalDialog(self)
+        dlg.submitted.connect(self._journal.add_entry)
+        dlg.show()
+
+    def _on_journal_saved(self, mood: int, note: str):
+        moods = {5: "😊 Great", 4: "🙂 Good", 3: "😐 Okay", 2: "😔 Low", 1: "😢 Bad"}
+        self._sfx.play("happy")
+        self.say(f"📓 Journal saved! Mood: {moods.get(mood, '?')}\n{self._journal.get_mood_trend()}",
+                 duration=5000, force=True)
+
+    # ==========================================================
+    #  v12: BACKUP
+    # ==========================================================
+    def _export_backup(self):
+        path = self._backup.export_backup()
+        if path:
+            self._sfx.play("achievement")
+            self.say(f"💾 Backup saved!\n{os.path.basename(path)}", duration=4000, force=True)
+        else:
+            self.say("❌ Backup failed!", duration=3000, force=True)
+
+    def _import_backup(self):
+        backups = self._backup.list_backups()
+        if not backups:
+            self.say("No backups found!", duration=3000)
+            return
+        choice, ok = QInputDialog.getItem(
+            self, "📦 Import Backup", "Select backup:", backups, 0, False
+        )
+        if ok and choice:
+            count = self._backup.import_backup(choice)
+            self.say(f"📦 Restored {count} files! Restart to apply.", duration=5000, force=True)
+
+    # ==========================================================
+    #  v12: FOCUS MODE TOGGLE
+    # ==========================================================
+    def _toggle_focus_mode(self):
+        on = self.settings.get("focus_mode")
+        self.settings.set("focus_mode", not on)
+        if not on:
+            self.say("🎯 Focus Mode ON — minimal distractions", duration=3000)
+        else:
+            self.say("🎯 Focus Mode OFF", duration=3000)
+        if self._tray:
+            self._tray.set_focus(not on)
+
+    def _check_daily_challenges(self):
+        """Gather current stats and check challenge progress."""
+        current = {
+            "total_keys": self.stats.data.get("total_keys", 0),
+            "focus_min": self.mood_engine.get_focus_minutes(),
+            "total_pets": self.stats.data.get("total_pets", 0),
+            "pomodoros_today": self.stats.data.get("pomodoros_today", 0),
+            "streak": self.stats.data.get("streak", 0),
+        }
+        self.social.check_challenges(current)
+        # Also check evolution
+        level = self.stats.data.get("level", 1)
+        self.social.check_evolution(level)
+
+    def _toggle_dashboard(self):
+        pet_pos = self.pos() + QPoint(75, 100)
+        self._prod_dashboard.toggle(pet_pos, self.pet_width)
+
+    def _open_tasbeeh_menu(self):
+        """Show tasbeeh preset selection and start counting."""
+        items = [f"{v['ar']} ({v['en']})" for v in TASBEEH_PRESETS.values()]
+        choice, ok = QInputDialog.getItem(
+            self, "📿 Tasbeeh / تسبيح", "Choose dhikr:", items, 0, False
+        )
+        if ok and choice:
+            key = list(TASBEEH_PRESETS.keys())[items.index(choice)]
+            self.tasbeeh.set_preset(key)
+            self.equip_accessory("tasbeeh")
+            self.say(f"📿 {self.tasbeeh.get_display()}", duration=4000, force=True)
+
+    def _tasbeeh_click(self):
+        """Handle a tasbeeh count increment (called on double-click when tasbeeh active)."""
+        result = self.tasbeeh.increment()
+        if result["completed"]:
+            self.say(f"✅ {result['ar']} done! ({result['target']}x)\nToday: {result['today_total']}", duration=5000, force=True)
+            self.mood_engine.boost_mood(5)
+        else:
+            display = self.tasbeeh.get_display()
+            self.say(f"📿 {display}", duration=2000, force=True)
+
+    # ==========================================================
     #  CONTEXT MENU (v3: achievements, todo, XP display)
     # ==========================================================
     def show_context_menu(self, pos):
         menu = QMenu(self)
-        menu.setStyleSheet(
-            "QMenu { background: #F5F5F5; border: 1px solid #888; }"
-            "QMenu::item { padding: 6px 24px; color: #222222; }"
-            "QMenu::item:selected { background: #5599ff; color: white; }"
-            "QMenu::item:disabled { color: #888888; }"
-            "QMenu::separator { height: 1px; background: #ccc; margin: 4px 8px; }"
-        )
+        menu.setStyleSheet(_MENU_SS)
         name = self.settings.get("pet_name")
         lv = self.stats.data.get("level", 1)
 
-        # --- Header (non-clickable info) ---
-        header = QAction(f"{name}  |  Lv.{lv}", self)
+        # ── Header ────────────────────────────────────────────
+        header = QAction(f"{name}  ·  Lv.{lv}  ·  v{__version__}", self)
         header.setEnabled(False)
         menu.addAction(header)
+
+        if self._feature_errors:
+            err_act = QAction(f"⚠️ {len(self._feature_errors)} feature error(s)", self)
+            err_act.triggered.connect(self._show_feature_errors)
+            menu.addAction(err_act)
+
+        if self._meeting_detector.in_meeting:
+            mtg_act = QAction(f"🎥 In Meeting: {self._meeting_detector.meeting_app}", self)
+            mtg_act.setEnabled(False)
+            menu.addAction(mtg_act)
+
         menu.addSeparator()
 
-        # --- Pomodoro ---
+        # ── Quick Actions (top-level for fast access) ─────────
         if self.pomodoro_active:
             mins_left = self.pomodoro_remaining // 60
             phase = "Break" if self.pomodoro_is_break else "Focus"
-            pomo_action = QAction(f"Stop Pomodoro ({phase} {mins_left}m left)", self)
+            pomo_action = QAction(f"🍅 Stop Pomodoro ({phase} {mins_left}m left)", self)
             pomo_action.triggered.connect(self.stop_pomodoro)
         else:
-            pomo_action = QAction("Start Pomodoro", self)
+            pomo_action = QAction("🍅 Start Pomodoro", self)
             pomo_action.triggered.connect(self.start_pomodoro)
         menu.addAction(pomo_action)
 
-        menu.addSeparator()
-
-        # --- Stats ---
-        stats_action = QAction("Session Stats", self)
-        stats_action.triggered.connect(self._show_stats)
-        menu.addAction(stats_action)
-
-        lifetime_action = QAction("Lifetime Stats & Streak", self)
-        lifetime_action.triggered.connect(self._show_lifetime_stats)
-        menu.addAction(lifetime_action)
-
-        analytics_action = QAction("📊 Analytics Dashboard", self)
-        analytics_action.triggered.connect(self._show_analytics)
-        menu.addAction(analytics_action)
-
-        # v3: Achievements
-        if self.settings.get("enable_achievements"):
-            unlocked, total = self.achievement_engine.get_unlocked_count()
-            ach_action = QAction(f"Achievements ({unlocked}/{total})", self)
-            ach_action.triggered.connect(self._show_achievements)
-            menu.addAction(ach_action)
-
-        menu.addSeparator()
-
-        # --- v4: Music submenu ---
-        music_menu = menu.addMenu("Music")
-        music_menu.setStyleSheet(
-            "QMenu { background: #F5F5F5; border: 1px solid #888; }"
-            "QMenu::item { padding: 6px 20px; color: #222222; }"
-            "QMenu::item:selected { background: #5599ff; color: white; }"
-        )
-
-        # Media controls at the top
-        pp_label = "Pause" if self._music_playing else "Play"
-        play_pause_action = QAction(f"\u23ef {pp_label}", self)
-        play_pause_action.triggered.connect(self._media_play_pause)
-        music_menu.addAction(play_pause_action)
-
-        next_action = QAction("\u23ed Next Track", self)
-        next_action.triggered.connect(self._media_next)
-        music_menu.addAction(next_action)
-
-        prev_action = QAction("\u23ee Previous Track", self)
-        prev_action.triggered.connect(self._media_prev)
-        music_menu.addAction(prev_action)
-
-        vol_up_action = QAction("\U0001f50a Volume Up", self)
-        vol_up_action.triggered.connect(self._media_vol_up)
-        music_menu.addAction(vol_up_action)
-
-        vol_down_action = QAction("\U0001f509 Volume Down", self)
-        vol_down_action.triggered.connect(self._media_vol_down)
-        music_menu.addAction(vol_down_action)
-
-        mute_action = QAction("\U0001f507 Mute", self)
-        mute_action.triggered.connect(self._media_mute)
-        music_menu.addAction(mute_action)
-
-        music_menu.addSeparator()
-
-        # Now playing info
-        if self.music_detector.is_playing and self.music_detector.current_track:
-            now_playing = QAction(f"\u266b {self.music_detector.current_track[:35]}", self)
-            now_playing.setEnabled(False)
-            music_menu.addAction(now_playing)
-            music_menu.addSeparator()
-
-        play_yt = QAction("Play YouTube URL...", self)
-        play_yt.triggered.connect(self._play_youtube_url)
-        music_menu.addAction(play_yt)
-
-        search_yt = QAction("Search YouTube...", self)
-        search_yt.triggered.connect(self._search_youtube)
-        music_menu.addAction(search_yt)
-
-        music_menu.addSeparator()
-
-        add_sched = QAction("Schedule Music...", self)
-        add_sched.triggered.connect(self._add_music_schedule)
-        music_menu.addAction(add_sched)
-
-        view_sched = QAction("View Schedules", self)
-        view_sched.triggered.connect(self._view_music_schedules)
-        music_menu.addAction(view_sched)
-
-        remove_sched = QAction("Remove Schedule...", self)
-        remove_sched.triggered.connect(self._remove_music_schedule)
-        music_menu.addAction(remove_sched)
-
-        # --- v4: Web tracking ---
-        web_report = QAction("Website Report", self)
-        web_report.triggered.connect(self._show_web_report)
-        menu.addAction(web_report)
-
-        menu.addSeparator()
-
-        # --- v6: AI Chat ---
         ai_status = "🟢" if self.ai_brain.is_available else "🔴"
         chat_action = QAction(f"{ai_status} Chat with {name}...", self)
         chat_action.triggered.connect(self._open_ai_chat)
         menu.addAction(chat_action)
 
-        ai_model_action = QAction("AI Model Settings...", self)
-        ai_model_action.triggered.connect(self._configure_ai)
-        menu.addAction(ai_model_action)
+        if self.settings.get("enable_mini_todo"):
+            todo_action = QAction("📝 To-Do List", self)
+            todo_action.triggered.connect(self._toggle_todo_widget)
+            menu.addAction(todo_action)
 
-        ai_toggle = self.settings.get("enable_ai")
-        ai_toggle_action = QAction("Disable AI Brain" if ai_toggle else "Enable AI Brain", self)
-        ai_toggle_action.triggered.connect(self._toggle_ai)
-        menu.addAction(ai_toggle_action)
-
-        menu.addSeparator()
-
-        # --- v6: Quick Actions submenu ---
-        actions_menu = menu.addMenu("\u26a1 Quick Actions")
-        actions_menu.setStyleSheet(
-            "QMenu { background: #F5F5F5; border: 1px solid #888; }"
-            "QMenu::item { padding: 6px 20px; color: #222222; }"
-            "QMenu::item:selected { background: #5599ff; color: white; }"
-        )
-
-        screenshot_act = QAction("\U0001f4f8 Take Screenshot", self)
-        screenshot_act.triggered.connect(self._take_screenshot)
-        actions_menu.addAction(screenshot_act)
-
-        actions_menu.addSeparator()
-
-        run_app_act = QAction("\U0001f680 Run App...", self)
-        run_app_act.triggered.connect(self._run_app_dialog)
-        actions_menu.addAction(run_app_act)
-
-        actions_menu.addSeparator()
-
-        shutdown_act = QAction("\u23fb Shutdown PC", self)
-        shutdown_act.triggered.connect(self._shutdown_pc)
-        actions_menu.addAction(shutdown_act)
-
-        restart_act = QAction("\U0001f504 Restart PC", self)
-        restart_act.triggered.connect(self._restart_pc)
-        actions_menu.addAction(restart_act)
+        encourage_action = QAction("💪 Encourage Me!", self)
+        encourage_action.triggered.connect(lambda: self.say_random("encourage", duration=4000))
+        menu.addAction(encourage_action)
 
         menu.addSeparator()
 
-        # --- v9: Desktop Organizer submenu ---
-        org_menu = menu.addMenu("\U0001f5c2\ufe0f Desktop Organizer")
-        org_menu.setStyleSheet(
-            "QMenu { background: #F5F5F5; border: 1px solid #888; }"
-            "QMenu::item { padding: 6px 20px; color: #222222; }"
-            "QMenu::item:selected { background: #5599ff; color: white; }"
-        )
+        # ── 📊 Stats & Progress ───────────────────────────────
+        stats_menu = menu.addMenu("📊 Stats & Progress")
+        stats_menu.setStyleSheet(_SUB_MENU_SS)
 
+        stats_menu.addAction(self._make_action("📈 Session Stats", self._show_stats))
+        stats_menu.addAction(self._make_action("🏅 Lifetime Stats & Streak", self._show_lifetime_stats))
+        stats_menu.addAction(self._make_action("📊 Analytics Dashboard", self._show_analytics))
+        stats_menu.addAction(self._make_action("🔥 Streak Calendar", self._show_streak_calendar))
+        stats_menu.addAction(self._make_action("🌐 Website Report", self._show_web_report))
+
+        if self.settings.get("enable_achievements"):
+            unlocked, total = self.achievement_engine.get_unlocked_count()
+            stats_menu.addAction(self._make_action(f"🏆 Achievements ({unlocked}/{total})", self._show_achievements))
+
+        wardrobe_count = len(self._wardrobe.get_unlocked())
+        stats_menu.addAction(self._make_action(f"👗 Wardrobe ({wardrobe_count}/{len(WARDROBE_ITEMS)})", self._show_wardrobe))
+
+        challenges = self.social.get_daily_challenges()
+        ch_done = sum(1 for c in challenges if c.get("completed"))
+        stats_menu.addAction(self._make_action(
+            f"🎮 Challenges ({ch_done}/{len(challenges)})",
+            lambda: self.say(self.social.get_challenge_display(), duration=8000, force=True)))
+
+        stats_menu.addAction(self._make_action("🃏 Generate Stats Card", self._generate_stats_card))
+
+        # ── 🎯 Focus & Productivity ──────────────────────────
+        focus_menu = menu.addMenu("🎯 Focus & Productivity")
+        focus_menu.setStyleSheet(_SUB_MENU_SS)
+
+        focus_menu.addAction(self._make_action("📊 Productivity Dashboard", self._toggle_dashboard))
+        focus_menu.addAction(self._make_action("🎯 Focus Planner", self._toggle_focus_planner))
+        focus_menu.addAction(self._make_action("📊 App Time Report", self._show_app_time_report))
+        focus_menu.addAction(self._make_action("⌨️ Keyboard Heatmap", self._show_keyboard_heatmap))
+
+        focus_menu.addSeparator()
+
+        focus_menu.addAction(self._make_action(
+            "🎯 Smart Daily Goals",
+            lambda: self.say(self.daily_briefing.smart_daily_goals(), duration=8000, force=True)))
+        focus_menu.addAction(self._make_action(
+            "📅 Weekly Review",
+            lambda: self.say(self.daily_briefing.weekly_review(), duration=10000, force=True)))
+
+        focus_menu.addSeparator()
+
+        eye_on = self.settings.get("enable_eye_care")
+        focus_menu.addAction(self._make_action(
+            f"👁️ Eye Care 20-20-20 {'ON' if eye_on else 'OFF'}", self._toggle_eye_care))
+
+        if self._code_companion:
+            focus_menu.addAction(self._make_action(
+                "🔧 Code Companion",
+                lambda: self.say(self._code_companion.get_repo_summary(), duration=6000, force=True)))
+
+        # ── 🛠️ Tools ─────────────────────────────────────────
+        tools_menu = menu.addMenu("🛠️ Tools")
+        tools_menu.setStyleSheet(_SUB_MENU_SS)
+
+        tools_menu.addAction(self._make_action("⏱️ Quick Timer", self._toggle_quick_timer))
+        tools_menu.addAction(self._make_action("📸 Screenshot", self._screenshot.start_capture))
+        tools_menu.addAction(self._make_action("📋 Clipboard History", self._toggle_clipboard_history))
+
+        tools_menu.addSeparator()
+
+        # Utilities
+        if self._screen_recorder.is_recording:
+            m, s = divmod(self._screen_recorder.elapsed_sec, 60)
+            tools_menu.addAction(self._make_action(
+                f"⏹ Stop Recording ({m:02d}:{s:02d})", self._stop_screen_recording))
+        else:
+            tools_menu.addAction(self._make_action("🎬 Screen Recorder", self._show_screen_recorder))
+
+        locked_ct = len(self._folder_locker.get_locked())
+        tools_menu.addAction(self._make_action(
+            f"🔒 Folder Locker ({locked_ct} locked)", self._show_folder_locker))
+
+        tools_menu.addAction(self._make_action("📦 Compress / Extract", self._show_file_compressor))
+
+        tools_menu.addSeparator()
+
+        rem_count = self._smart_reminders.get_pending_count()
+        tools_menu.addAction(self._make_action(f"⏰ Smart Reminders ({rem_count})", self._add_smart_reminder))
+
+        note_count = self._sticky_notes.get_count()
+        tools_menu.addAction(self._make_action(f"🗒️ Sticky Notes ({note_count})", self._sticky_notes.toggle_all))
+        archive_count = len(self._sticky_notes.get_archive())
+        if archive_count:
+            tools_menu.addAction(self._make_action(f"📦 Note Archive ({archive_count})", self._show_note_archive))
+
+        tools_menu.addAction(self._make_action("📝 Quick Note...", self._quick_note))
+
+        tools_menu.addSeparator()
+
+        tools_menu.addAction(self._make_action("🤖 AI Smart Actions", self._show_smart_actions))
+        tools_menu.addAction(self._make_action("🎯 Quick Launcher", lambda: self._quick_launcher.show_at(
+            self.pos() + QPoint(self.width() // 2, self.height() // 2))))
+        tools_menu.addAction(self._make_action("✏️ Edit Launcher...", self._edit_launcher))
+
+        tools_menu.addSeparator()
+
+        tools_menu.addAction(self._make_action("🌅 Morning Routine", self._toggle_morning_routine))
+
+        # Journal
+        journal_today = self._journal.get_today()
+        j_label = "📓 Journal"
+        if journal_today:
+            moods_e = {5: "😊", 4: "🙂", 3: "😐", 2: "😔", 1: "😢"}
+            j_label += f" (today: {moods_e.get(journal_today['mood'], '?')})"
+        tools_menu.addAction(self._make_action(j_label, self._show_journal))
+
+        # Mood Journal
+        mood_today = self._mood_journal.get_today()
+        mood_label = "💭 Mood Journal"
+        if mood_today:
+            emojis_m = {1: "😢", 2: "😔", 3: "😐", 4: "🙂", 5: "😄"}
+            mood_label += f" ({emojis_m.get(mood_today['score'], '?')})"
+        tools_menu.addAction(self._make_action(mood_label, self._show_mood_journal))
+
+        # ── 🎵 Music ─────────────────────────────────────────
+        music_menu = menu.addMenu("🎵 Music")
+        music_menu.setStyleSheet(_SUB_MENU_SS)
+
+        if self.music_detector.is_playing and self.music_detector.current_track:
+            now_playing = QAction(f"♫ {self.music_detector.current_track[:35]}", self)
+            now_playing.setEnabled(False)
+            music_menu.addAction(now_playing)
+            music_menu.addSeparator()
+
+        pp_label = "Pause" if self._music_playing else "Play"
+        music_menu.addAction(self._make_action(f"⏯ {pp_label}", self._media_play_pause))
+        music_menu.addAction(self._make_action("⏭ Next", self._media_next))
+        music_menu.addAction(self._make_action("⏮ Previous", self._media_prev))
+        music_menu.addAction(self._make_action("🔊 Vol Up", self._media_vol_up))
+        music_menu.addAction(self._make_action("🔉 Vol Down", self._media_vol_down))
+        music_menu.addAction(self._make_action("🔇 Mute", self._media_mute))
+
+        music_menu.addSeparator()
+
+        music_menu.addAction(self._make_action("▶ Play YouTube URL...", self._play_youtube_url))
+        music_menu.addAction(self._make_action("🔍 Search YouTube...", self._search_youtube))
+
+        music_menu.addSeparator()
+
+        music_menu.addAction(self._make_action("📅 Schedule Music...", self._add_music_schedule))
+        music_menu.addAction(self._make_action("📋 View Schedules", self._view_music_schedules))
+        music_menu.addAction(self._make_action("🗑️ Remove Schedule...", self._remove_music_schedule))
+
+        # ── 🖥️ System ────────────────────────────────────────
+        sys_menu = menu.addMenu("🖥️ System")
+        sys_menu.setStyleSheet(_SUB_MENU_SS)
+
+        if self._system_health and self._system_health.available():
+            snap = self._system_health.get_snapshot()
+            cpu = snap.get("cpu_percent", 0)
+            ram = snap.get("ram_percent", 0)
+            health_act = QAction(f"💻 CPU {cpu:.0f}% | RAM {ram:.0f}%", self)
+            health_act.setEnabled(False)
+            sys_menu.addAction(health_act)
+            bat = snap.get("battery_percent")
+            if bat is not None:
+                charging = "⚡" if snap.get("battery_charging") else "🔋"
+                bat_act = QAction(f"{charging} Battery: {bat:.0f}%", self)
+                bat_act.setEnabled(False)
+                sys_menu.addAction(bat_act)
+            sys_menu.addSeparator()
+
+        notif_count = len(self._notif_log)
+        sys_menu.addAction(self._make_action(f"🔔 Notifications ({notif_count})", self._show_notification_log))
+
+        prog_count = len(self._progress_items)
+        sys_menu.addAction(self._make_action(f"📥 Progress Monitor ({prog_count})", self._toggle_progress_monitor))
+
+        if self._weather:
+            w_display = self._weather.get_display()
+            w_act = QAction(f"🌤️ {w_display}", self)
+            w_act.setEnabled(False)
+            sys_menu.addAction(w_act)
+            sys_menu.addAction(self._make_action(
+                "⏰ Hourly Forecast",
+                lambda: self.say(self._weather.get_hourly_summary(), duration=8000, force=True)))
+
+        sys_menu.addSeparator()
+
+        # Desktop Organizer
+        org_sub = sys_menu.addMenu("🗂️ Desktop Organizer")
+        org_sub.setStyleSheet(_SUB_MENU_SS)
         org_enabled = self.settings.get("enable_desktop_organizer")
-        org_toggle_act = QAction(
-            "\u2705 Organizer ON" if org_enabled else "\u274c Organizer OFF", self
-        )
-        org_toggle_act.triggered.connect(self._toggle_desktop_organizer)
-        org_menu.addAction(org_toggle_act)
-
-        org_scan_act = QAction("\U0001f50d Scan Now", self)
-        org_scan_act.triggered.connect(self._manual_organize)
-        org_menu.addAction(org_scan_act)
-
-        org_interval_act = QAction("\u23f1\ufe0f Set Interval...", self)
-        org_interval_act.triggered.connect(self._set_organizer_interval)
-        org_menu.addAction(org_interval_act)
-
-        # Show quick stats
+        org_sub.addAction(self._make_action(
+            "✅ Organizer ON" if org_enabled else "❌ Organizer OFF",
+            self._toggle_desktop_organizer))
+        org_sub.addAction(self._make_action("🔍 Scan Now", self._manual_organize))
+        org_sub.addAction(self._make_action("⏱️ Set Interval...", self._set_organizer_interval))
         org_stats = self._desktop_organizer.get_stats()
         if org_stats:
-            org_menu.addSeparator()
+            org_sub.addSeparator()
             for rname, rinfo in org_stats.items():
                 stat_act = QAction(f"{rinfo['icon']} {rname}: {rinfo['count']} files", self)
                 stat_act.setEnabled(False)
-                org_menu.addAction(stat_act)
+                org_sub.addAction(stat_act)
 
-        menu.addSeparator()
+        sys_menu.addSeparator()
 
-        # --- v10: Skins submenu ---
-        skin_menu = menu.addMenu("\U0001f3a8 Change Skin")
-        skin_menu.setStyleSheet(
-            "QMenu { background: #F5F5F5; border: 1px solid #888; }"
-            "QMenu::item { padding: 6px 20px; color: #222222; }"
-            "QMenu::item:selected { background: #5599ff; color: white; }"
-            "QMenu::item:disabled { color: #888888; }"
-        )
+        # Quick system actions
+        sys_menu.addAction(self._make_action("📸 Take Screenshot", self._take_screenshot))
+        sys_menu.addAction(self._make_action("🚀 Run App...", self._run_app_dialog))
+
+        sys_menu.addSeparator()
+
+        sys_menu.addAction(self._make_action("⏻ Shutdown PC", self._shutdown_pc))
+        sys_menu.addAction(self._make_action("🔄 Restart PC", self._restart_pc))
+
+        sys_menu.addSeparator()
+
+        # Backup
+        backup_sub = sys_menu.addMenu("💾 Backup & Restore")
+        backup_sub.setStyleSheet(_SUB_MENU_SS)
+        backup_sub.addAction(self._make_action("📤 Export Backup", self._export_backup))
+        backup_sub.addAction(self._make_action("📥 Import Backup", self._import_backup))
+
+        # ── 🕌 Islamic ───────────────────────────────────────
+        islamic_visible = (self.settings.get("enable_prayer_times")
+                           or self.settings.get("enable_azkar"))
+        if islamic_visible:
+            islamic_menu = menu.addMenu("🕌 Islamic")
+            islamic_menu.setStyleSheet(_SUB_MENU_SS)
+
+            # Prayer Times
+            if self.settings.get("enable_prayer_times"):
+                prayer_sub = islamic_menu.addMenu("🕌 Prayer Times")
+                prayer_sub.setStyleSheet(_SUB_MENU_SS)
+
+                times = self.prayer_manager.get_times()
+                now = datetime.now()
+                for pname in PrayerTimeManager.PRAYER_NAMES:
+                    pt = times.get(pname)
+                    if pt:
+                        ar = PrayerTimeManager.PRAYER_NAMES_AR[PrayerTimeManager.PRAYER_NAMES.index(pname)]
+                        passed = " ✓" if pt <= now else ""
+                        time_str = pt.strftime("%I:%M %p")
+                        action = QAction(f"{ar}  {pname}:  {time_str}{passed}", self)
+                        action.setEnabled(False)
+                        prayer_sub.addAction(action)
+
+                prayer_sub.addSeparator()
+
+                nxt_name, nxt_ar, nxt_dt = self.prayer_manager.get_next_prayer()
+                if nxt_dt:
+                    diff = nxt_dt - now
+                    mins_left = int(diff.total_seconds() / 60)
+                    hrs = mins_left // 60
+                    mns = mins_left % 60
+                    remaining = f"{hrs}h {mns}m" if hrs > 0 else f"{mns}m"
+                    next_action = QAction(f"⏳ Next: {nxt_ar} {nxt_name} in {remaining}", self)
+                    next_action.setEnabled(False)
+                    prayer_sub.addAction(next_action)
+
+                prayer_sub.addSeparator()
+                prayer_sub.addAction(self._make_action("📍 Set Location...", self._set_prayer_location))
+                prayer_sub.addAction(self._make_action("🧮 Calculation Method...", self._set_prayer_method))
+
+            # Azkar
+            if self.settings.get("enable_azkar"):
+                azkar_sub = islamic_menu.addMenu("📿 Azkar / أذكار")
+                azkar_sub.setStyleSheet(_SUB_MENU_SS)
+                for cat_key, cat_data in AZKAR_CATEGORIES.items():
+                    icon = cat_data["icon"]
+                    name_ar = cat_data["name_ar"]
+                    count = len(cat_data["items"])
+                    azkar_sub.addAction(self._make_action(
+                        f"{icon} {name_ar} ({count})",
+                        lambda checked=False, k=cat_key: self._open_azkar_reader(k)))
+
+                azkar_sub.addSeparator()
+                azkar_sub.addAction(self._make_action("📿 Quick Dhikr", self._show_quick_dhikr))
+                azkar_sub.addSeparator()
+                azkar_interval = self.settings.get("azkar_reminder_min")
+                azkar_sub.addAction(self._make_action(
+                    f"⏰ Reminder every {azkar_interval} min", self._set_azkar_interval))
+
+            # Tasbeeh
+            islamic_menu.addSeparator()
+            islamic_menu.addAction(self._make_action(
+                f"📿 Tasbeeh ({self.tasbeeh.get_display()})", self._open_tasbeeh_menu))
+
+        # ── ⚙️ Settings ──────────────────────────────────────
+        settings_menu = menu.addMenu("⚙️ Settings")
+        settings_menu.setStyleSheet(_SUB_MENU_SS)
+
+        # AI settings
+        ai_toggle = self.settings.get("enable_ai")
+        settings_menu.addAction(self._make_action(
+            f"🧠 AI Brain {'ON' if ai_toggle else 'OFF'}", self._toggle_ai))
+        settings_menu.addAction(self._make_action("🤖 AI Model Settings...", self._configure_ai))
+
+        settings_menu.addSeparator()
+
+        # Behavior toggles
+        following = self.settings.get("enable_follow_cursor")
+        settings_menu.addAction(self._make_action(
+            "🐾 Stop Following" if following else "🐾 Follow My Cursor",
+            self._toggle_follow))
+
+        focus_on = self.settings.get("focus_mode")
+        settings_menu.addAction(self._make_action(
+            "🔇 Exit Focus Mode" if focus_on else "🔇 Focus Mode (Mute)",
+            self._toggle_focus_mode))
+
+        reminders_on = self.settings.get("enable_reminders")
+        settings_menu.addAction(self._make_action(
+            "🔔 Reminders ON" if reminders_on else "🔕 Reminders OFF",
+            self._toggle_reminders))
+
+        digest_ct = self._notif_digest.peek_count()
+        dnd = self._notif_digest.is_dnd
+        settings_menu.addAction(self._make_action(
+            f"🔕 DND {'ON' if dnd else 'OFF'} ({digest_ct} queued)",
+            self._toggle_dnd))
+
+        if self._voice.is_available():
+            voice_on = self.settings.get("enable_voice_commands")
+            settings_menu.addAction(self._make_action(
+                f"🎤 Voice {'ON' if voice_on else 'OFF'}", self._toggle_voice_commands))
+
+        clip_on = self.settings.get("enable_clipboard_assistant")
+        settings_menu.addAction(self._make_action(
+            f"📋 Clipboard Assistant {'ON' if clip_on else 'OFF'}",
+            self._toggle_clipboard_assistant))
+
+        sound_on = self.settings.get("enable_sound_reactor")
+        settings_menu.addAction(self._make_action(
+            f"🎤 Sound Reactions {'ON' if sound_on else 'OFF'}",
+            self._toggle_sound_reactor))
+
+        sfx_on = self._sfx.is_enabled()
+        settings_menu.addAction(self._make_action(
+            f"🔊 Pet Sounds {'ON' if sfx_on else 'OFF'}", self._toggle_pet_sounds))
+
+        settings_menu.addSeparator()
+
+        # Skins
+        skin_sub = settings_menu.addMenu("🎨 Change Skin")
+        skin_sub.setStyleSheet(_SUB_MENU_SS)
         current_skin = self.settings.get("current_skin")
         for skin_info in get_available_skins():
-            prefix = "\u2714 " if skin_info["id"] == current_skin else "  "
+            prefix = "✔ " if skin_info["id"] == current_skin else "  "
             act = QAction(f"{prefix}{skin_info['name']}", self)
-            # Add thumbnail icon
             thumb = generate_skin_thumbnail(skin_info["id"])
             if thumb:
                 act.setIcon(QIcon(thumb))
             skin_id = skin_info["id"]
             act.triggered.connect(lambda checked, sid=skin_id: self._apply_skin(sid))
-            skin_menu.addAction(act)
+            skin_sub.addAction(act)
 
-        menu.addSeparator()
+        settings_menu.addSeparator()
 
-        # --- v7: Notifications ---
-        notif_count = len(self._notif_log)
-        notif_action = QAction(f"\U0001f514 Notifications ({notif_count})", self)
-        notif_action.triggered.connect(self._show_notification_log)
-        menu.addAction(notif_action)
+        settings_menu.addAction(self._make_action(f"✏️ Rename {name}...", self._rename_pet))
 
-        # --- v11: Progress Monitor ---
-        prog_count = len(self._progress_items)
-        prog_icon = "\U0001f4e5" if prog_count else "\U0001f4e5"
-        prog_label = f"{prog_icon} Progress Monitor ({prog_count} active)"
-        prog_action = QAction(prog_label, self)
-        prog_action.triggered.connect(self._toggle_progress_monitor)
-        menu.addAction(prog_action)
-
-        # --- Encourage ---
-        encourage_action = QAction("Encourage Me!", self)
-        encourage_action.triggered.connect(lambda: self.say_random("encourage", duration=4000))
-        menu.addAction(encourage_action)
-
-        # Quick Note
-        note_action = QAction("Quick Note...", self)
-        note_action.triggered.connect(self._quick_note)
-        menu.addAction(note_action)
-
-        # v3: Mini Todo
-        if self.settings.get("enable_mini_todo"):
-            todo_action = QAction("To-Do List", self)
-            todo_action.triggered.connect(self._toggle_todo_widget)
-            menu.addAction(todo_action)
-
-        menu.addSeparator()
-
-        # Follow cursor
-        following = self.settings.get("enable_follow_cursor")
-        follow_action = QAction("Stop Following" if following else "Follow My Cursor", self)
-        follow_action.triggered.connect(self._toggle_follow)
-        menu.addAction(follow_action)
-
-        # Focus mode
-        focus_on = self.settings.get("focus_mode")
-        focus_action = QAction("Exit Focus Mode" if focus_on else "Focus Mode (Mute)", self)
-        focus_action.triggered.connect(self._toggle_focus_mode)
-        menu.addAction(focus_action)
-
-        # Reminders
-        reminders_on = self.settings.get("enable_reminders")
-        reminder_action = QAction("Disable Reminders" if reminders_on else "Enable Reminders", self)
-        reminder_action.triggered.connect(self._toggle_reminders)
-        menu.addAction(reminder_action)
-
-        # --- v5: Prayer times submenu ---
-        if self.settings.get("enable_prayer_times"):
-            prayer_menu = menu.addMenu("\U0001f54c Prayer Times")
-            prayer_menu.setStyleSheet(
-                "QMenu { background: #F5F5F5; border: 1px solid #888; }"
-                "QMenu::item { padding: 6px 20px; color: #222222; }"
-                "QMenu::item:selected { background: #5599ff; color: white; }"
-            )
-
-            # Show all prayer times
-            times = self.prayer_manager.get_times()
-            now = datetime.now()
-            for pname in PrayerTimeManager.PRAYER_NAMES:
-                pt = times.get(pname)
-                if pt:
-                    ar = PrayerTimeManager.PRAYER_NAMES_AR[PrayerTimeManager.PRAYER_NAMES.index(pname)]
-                    passed = " \u2713" if pt <= now else ""
-                    time_str = pt.strftime("%I:%M %p")
-                    action = QAction(f"{ar}  {pname}:  {time_str}{passed}", self)
-                    action.setEnabled(False)
-                    prayer_menu.addAction(action)
-
-            prayer_menu.addSeparator()
-
-            # Next prayer info
-            nxt_name, nxt_ar, nxt_dt = self.prayer_manager.get_next_prayer()
-            if nxt_dt:
-                diff = nxt_dt - now
-                mins_left = int(diff.total_seconds() / 60)
-                hrs = mins_left // 60
-                mns = mins_left % 60
-                if hrs > 0:
-                    remaining = f"{hrs}h {mns}m"
-                else:
-                    remaining = f"{mns}m"
-                next_action = QAction(f"\u23f3 Next: {nxt_ar} {nxt_name} in {remaining}", self)
-                next_action.setEnabled(False)
-                prayer_menu.addAction(next_action)
-
-            prayer_menu.addSeparator()
-
-            # Set location
-            loc_action = QAction("Set Location...", self)
-            loc_action.triggered.connect(self._set_prayer_location)
-            prayer_menu.addAction(loc_action)
-
-            # Change calculation method
-            method_action = QAction("Calculation Method...", self)
-            method_action.triggered.connect(self._set_prayer_method)
-            prayer_menu.addAction(method_action)
-
-        # --- v8: Azkar submenu ---
-        if self.settings.get("enable_azkar"):
-            azkar_menu = menu.addMenu("\U0001f4ff Azkar / \u0623\u0630\u0643\u0627\u0631")
-            azkar_menu.setStyleSheet(
-                "QMenu { background: #F5F5F5; border: 1px solid #888; }"
-                "QMenu::item { padding: 6px 20px; color: #222222; }"
-                "QMenu::item:selected { background: #5599ff; color: white; }"
-            )
-            for cat_key, cat_data in AZKAR_CATEGORIES.items():
-                icon = cat_data["icon"]
-                name_ar = cat_data["name_ar"]
-                count = len(cat_data["items"])
-                cat_action = QAction(f"{icon} {name_ar} ({count})", self)
-                cat_action.triggered.connect(
-                    lambda checked, k=cat_key: self._open_azkar_reader(k)
-                )
-                azkar_menu.addAction(cat_action)
-            azkar_menu.addSeparator()
-            quick_dhikr = QAction("\U0001f4ff Quick Dhikr", self)
-            quick_dhikr.triggered.connect(self._show_quick_dhikr)
-            azkar_menu.addAction(quick_dhikr)
-            azkar_menu.addSeparator()
-            azkar_interval = self.settings.get("azkar_reminder_min")
-            interval_action = QAction(f"\u23f0 Reminder every {azkar_interval} min", self)
-            interval_action.triggered.connect(self._set_azkar_interval)
-            azkar_menu.addAction(interval_action)
-
-        menu.addSeparator()
-
-        # Rename
-        rename_action = QAction(f"Rename {name}...", self)
-        rename_action.triggered.connect(self._rename_pet)
-        menu.addAction(rename_action)
-
-        # Run on startup toggle
         is_startup = self._is_startup_enabled()
-        startup_action = QAction(
-            "\u2705 Run on Startup" if is_startup else "\u274c Run on Startup", self
-        )
-        startup_action.triggered.connect(self._toggle_startup)
-        menu.addAction(startup_action)
+        settings_menu.addAction(self._make_action(
+            "✅ Run on Startup" if is_startup else "❌ Run on Startup",
+            self._toggle_startup))
+
+        settings_menu.addAction(self._make_action("❓ Hotkey Help (F1)", self._show_hotkey_help))
+        settings_menu.addSeparator()
+        settings_menu.addAction(self._make_action("⚙️ All Settings...", self._open_settings_ui))
 
         menu.addSeparator()
 
-        # Settings UI
-        settings_action = QAction("⚙️ Settings...", self)
-        settings_action.triggered.connect(self._open_settings_ui)
-        menu.addAction(settings_action)
-
-        menu.addSeparator()
-
-        # Quit
-        quit_action = QAction(f"Say Goodbye to {name} (Quit)", self)
+        # ── Quit ──────────────────────────────────────────────
+        quit_action = QAction(f"👋 Say Goodbye to {name} (Quit)", self)
         quit_action.triggered.connect(self._graceful_quit)
         menu.addAction(quit_action)
 
         menu.exec(pos)
+
+    def _make_action(self, text: str, callback) -> QAction:
+        """Helper to create a QAction with a connected callback."""
+        act = QAction(text, self)
+        act.triggered.connect(callback)
+        return act
+
+    def _show_feature_errors(self):
+        text = "⚠️ Feature Errors:\n" + "\n".join(f"• {e}" for e in self._feature_errors)
+        self.say(text, duration=8000, force=True)
 
     def _show_stats(self):
         self.say(self.mood_engine.get_stats_text(), duration=6000)
@@ -2207,6 +3706,162 @@ class DesktopPet(QWidget):
         if ok and new_name.strip():
             self.settings.set("pet_name", new_name.strip())
             self.say(f"I'm {new_name.strip()} now!", duration=3000)
+
+    def _toggle_clipboard_assistant(self):
+        on = self.settings.get("enable_clipboard_assistant")
+        self.settings.set("enable_clipboard_assistant", not on)
+        if not on:
+            if not self._clipboard_assistant:
+                self._clipboard_assistant = ClipboardAssistant()
+                self._clipboard_assistant.event_detected.connect(self._on_clipboard_event)
+            self.say("📋 Clipboard Assistant ON", duration=3000)
+        else:
+            if self._clipboard_assistant:
+                self._clipboard_assistant.stop()
+            self.say("📋 Clipboard Assistant OFF", duration=3000)
+
+    def _toggle_sound_reactor(self):
+        on = self.settings.get("enable_sound_reactor")
+        self.settings.set("enable_sound_reactor", not on)
+        if not on:
+            if not self._sound_reactor:
+                self._sound_reactor = SoundReactor(enabled=True)
+                self._sound_reactor.reaction.connect(self._on_sound_reaction)
+            else:
+                self._sound_reactor.set_enabled(True)
+            err = self._sound_reactor.get_error() if self._sound_reactor else None
+            if err:
+                self.say(f"🎤 Mic error: {err}", duration=5000, force=True)
+            else:
+                self.say("🎤 Sound Reactions ON", duration=3000)
+        else:
+            if self._sound_reactor:
+                self._sound_reactor.set_enabled(False)
+            self.say("🎤 Sound Reactions OFF", duration=3000)
+
+    def _toggle_dnd(self):
+        dnd = self._notif_digest.is_dnd
+        self._notif_digest.set_dnd(not dnd)
+        if not dnd:
+            self.say("🔕 Do Not Disturb ON", duration=3000)
+        else:
+            self.say("🔔 Do Not Disturb OFF", duration=3000)
+        if self._tray:
+            self._tray.set_dnd(not dnd)
+
+    def _on_meeting_start(self, app_name: str):
+        """Auto-enable DND when meeting detected."""
+        if not self._notif_digest.is_dnd:
+            self._notif_digest.set_dnd(True)
+            if self._tray:
+                self._tray.set_dnd(True)
+        self.say(f"🎥 Meeting detected ({app_name}) — DND ON", duration=3000, force=True)
+
+    def _on_meeting_end(self):
+        """Auto-disable DND when meeting ends."""
+        if self._notif_digest.is_dnd:
+            self._notif_digest.set_dnd(False)
+            if self._tray:
+                self._tray.set_dnd(False)
+        self.say("🎥 Meeting ended — DND OFF", duration=3000, force=True)
+
+    def _toggle_clipboard_history(self):
+        if self._clipboard_history.isVisible():
+            self._clipboard_history.hide()
+        else:
+            self._clipboard_history.move(self.x() + 80, self.y() - 300)
+            self._clipboard_history.show()
+
+    def _toggle_quick_timer(self):
+        if self._quick_timer.isVisible():
+            self._quick_timer.hide()
+        else:
+            self._quick_timer.move(self.x() + 80, self.y() - 250)
+            self._quick_timer.show()
+
+    def _show_hotkey_help(self):
+        dlg = HotkeyHelpDialog(self._hotkeys.get_bindings(), self)
+        dlg.exec()
+
+    def _show_mood_journal(self):
+        dlg = MoodJournalDialog(self._mood_journal, self)
+        dlg.exec()
+
+    def _show_app_time_report(self):
+        dlg = AppTimeDialog(self._app_time_tracker, self)
+        dlg.exec()
+
+    def _show_keyboard_heatmap(self):
+        self._kb_heatmap.flush()
+        dlg = KeyboardHeatmapDialog(self._kb_heatmap, self)
+        dlg.exec()
+
+    def _toggle_focus_planner(self):
+        if self._focus_planner.isVisible():
+            self._focus_planner.hide()
+        else:
+            self._focus_planner.move(self.x() + 80, self.y() - 300)
+            self._focus_planner.show()
+
+    def _toggle_morning_routine(self):
+        if self._morning_routine.isVisible():
+            self._morning_routine.hide()
+        else:
+            self._morning_routine.move(self.x() + 80, self.y() - 300)
+            self._morning_routine.show()
+
+    def _show_screen_recorder(self):
+        dlg = RecordDialog(self._screen_recorder, self)
+        dlg.exec()
+
+    def _stop_screen_recording(self):
+        self._screen_recorder.stop()
+
+    def _show_folder_locker(self):
+        dlg = FolderLockerDialog(self._folder_locker, self)
+        dlg.exec()
+
+    def _show_file_compressor(self):
+        dlg = FileCompressorDialog(self)
+        dlg.exec()
+
+    def _toggle_eye_care(self):
+        on = self.settings.get("enable_eye_care")
+        self.settings.set("enable_eye_care", not on)
+        if not on:
+            if not self._eye_care:
+                self._eye_care = EyeCareManager(
+                    eye_min=self.settings.get("eye_break_min"),
+                    water_min=self.settings.get("water_reminder_min"),
+                    stretch_min=self.settings.get("stretch_reminder_min"),
+                )
+                self._eye_care.break_needed.connect(self._on_health_break)
+                self._eye_care.break_finished.connect(self._on_break_done)
+            self.say("👁️ Eye Care ON — 20-20-20 active", duration=3000)
+        else:
+            if self._eye_care:
+                self._eye_care.stop()
+            self.say("👁️ Eye Care OFF", duration=3000)
+
+    def _toggle_pet_sounds(self):
+        on = self._sfx.is_enabled()
+        self._sfx.set_enabled(not on)
+        self.settings.set("enable_pet_sounds", not on)
+        if not on:
+            self._sfx.play("happy")
+            self.say("🔊 Pet Sounds ON", duration=2000)
+        else:
+            self.say("🔇 Pet Sounds OFF", duration=2000)
+
+    def _generate_stats_card(self):
+        name = self.settings.get("pet_name")
+        level = self.stats.data.get("level", 1)
+        pm = self.social.generate_stats_card(name, level, self.stats.data)
+        # Save to desktop
+        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+        path = os.path.join(desktop, f"{name}_stats_card.png")
+        pm.save(path, "PNG")
+        self.say(f"🃏 Stats card saved to Desktop!", duration=4000, force=True)
 
     # ==========================================================
     #  v8: AZKAR FEATURES
@@ -2614,11 +4269,13 @@ class DesktopPet(QWidget):
         # Toggle local state
         self._music_playing = not self._music_playing
         if self._music_playing:
+            self._show_headphones()
             if "music_listen" in self.animations:
                 self.set_state("music_listen")
             elif "dance" in self.animations:
                 self.set_state("dance")
         elif not self._music_playing:
+            self._hide_headphones()
             self.set_state("idle")
 
     def _media_next(self):
@@ -2832,10 +4489,39 @@ class DesktopPet(QWidget):
         self.stats.save()
         self.web_tracker.save()
         self.music_scheduler.save()
+        self.tasbeeh.save()
+        self.social.save()
+        if self._clipboard_assistant:
+            self._clipboard_assistant.stop()
+        if self._system_health:
+            self._system_health.stop()
+        if self._sound_reactor:
+            self._sound_reactor.stop()
+        if self._code_companion:
+            self._code_companion.stop()
+        # v12 cleanup
+        self._hotkeys.stop()
+        self._smart_reminders.stop()
+        if self._eye_care:
+            self._eye_care.stop()
+        self._sticky_notes.stop()
+        if self._weather:
+            self._weather.stop()
+        self._journal.stop()
+        if self._tray:
+            self._tray.stop()
+        self._voice.stop()
+        # v14 cleanup
+        self._clipboard_history.stop()
+        self._quick_timer.stop()
+        self._app_time_tracker.save()
+        self._kb_heatmap.stop()
+        self._mood_journal.stop()
+        self._real_events.stop()
         self._clear_checkpoint()
         self._progress_monitor.stop()
         self._scan_thread.quit()
-        self._scan_thread.wait(1000)
+        self._scan_thread.wait(3000)
         QApplication.instance().quit()
 
     def closeEvent(self, event):
@@ -2844,6 +4530,38 @@ class DesktopPet(QWidget):
         self.stats.save()
         self.web_tracker.save()
         self.music_scheduler.save()
+        self.tasbeeh.save()
+        self.social.save()
+        # Save reaction engine data (time patterns, mood patterns, session history)
+        self.reaction_engine.record_session_end(focus_min)
+        self.reaction_engine.save()
+        if self._clipboard_assistant:
+            self._clipboard_assistant.stop()
+        if self._system_health:
+            self._system_health.stop()
+        if self._sound_reactor:
+            self._sound_reactor.stop()
+        if self._code_companion:
+            self._code_companion.stop()
+        # v12 cleanup
+        self._hotkeys.stop()
+        self._smart_reminders.stop()
+        if self._eye_care:
+            self._eye_care.stop()
+        self._sticky_notes.stop()
+        if self._weather:
+            self._weather.stop()
+        self._journal.stop()
+        if self._tray:
+            self._tray.stop()
+        self._voice.stop()
+        # v14 cleanup
+        self._clipboard_history.stop()
+        self._quick_timer.stop()
+        self._app_time_tracker.save()
+        self._kb_heatmap.stop()
+        self._mood_journal.stop()
+        self._real_events.stop()
         self._clear_checkpoint()
         super().closeEvent(event)
 
@@ -2853,6 +4571,7 @@ class DesktopPet(QWidget):
 # ============================================================
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     pet = DesktopPet()
     pet.show()
     sys.exit(app.exec())

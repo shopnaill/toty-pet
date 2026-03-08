@@ -1,0 +1,103 @@
+{
+  "time_patterns": {
+    "Saturday": {
+      "starts": [
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19
+      ],
+      "count": 19,
+      "ends": [
+        18
+      ]
+    },
+    "Sunday": {
+      "starts": [
+        3,
+        3,
+        3,
+        3,
+        4,
+        4,
+        4,
+        4,
+        4,
+        5,
+        5,
+        17,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        18,
+        19
+      ],
+      "count": 22,
+      "ends": [
+        3,
+        4,
+        5,
+        5
+      ]
+    }
+  },
+  "mood_patterns": {
+    "5": 99.6788790256079
+  },
+  "session_history": [
+    {
+      "date": "2026-03-07T18:51",
+      "day": "Saturday",
+      "start_hour": 18,
+      "end_hour": 18,
+      "focus_min": 0
+    },
+    {
+      "date": "2026-03-08T03:18",
+      "day": "Sunday",
+      "start_hour": 3,
+      "end_hour": 3,
+      "focus_min": 0
+    },
+    {
+      "date": "2026-03-08T04:47",
+      "day": "Sunday",
+      "start_hour": 4,
+      "end_hour": 4,
+      "focus_min": 0
+    },
+    {
+      "date": "2026-03-08T05:49",
+      "day": "Sunday",
+      "start_hour": 5,
+      "end_hour": 5,
+      "focus_min": 0
+    },
+    {
+      "date": "2026-03-08T05:53",
+      "day": "Sunday",
+      "start_hour": 5,
+      "end_hour": 5,
+      "focus_min": 0
+    }
+  ],
+  "holiday_last": ""
+}
