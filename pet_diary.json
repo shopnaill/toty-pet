@@ -56,8 +56,6 @@
   },
   "2026-03-12": {
     "events": [
-      "[16:58] 🌅 Toty started a new session",
-      "[16:58] 🎨 Season detected: ramadan",
       "[16:59] 😿 Got hungry",
       "[16:59] 🎂 Fed cake",
       "[17:00] 💕 Petted (combo x1)",
@@ -105,7 +103,9 @@
       "[18:24] 🎨 Season detected: ramadan",
       "[18:47] 🌅 Toty started a new session",
       "[18:47] 🎨 Season detected: ramadan",
-      "[18:48] 😿 Got hungry"
+      "[18:48] 😿 Got hungry",
+      "[18:59] 💕 Petted (combo x1)",
+      "[19:05] 👋 Session ended (quit)"
     ],
     "summary": ""
   }

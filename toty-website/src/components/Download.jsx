@@ -1,6 +1,6 @@
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
-import { Download as DownloadIcon, Monitor, Cpu, HardDrive } from 'lucide-react'
+import { Download as DownloadIcon, Github, Monitor, Cpu, HardDrive } from 'lucide-react'
 import { useLang } from '../i18n/LangContext'
 import TotyCat from './TotyCat'
 import './Download.css'
@@ -40,7 +40,7 @@ export default function Download() {
 
           <div className="dl-buttons">
             <motion.a
-              href="https://github.com/mfoud5391/toty/releases"
+              href="https://github.com/mfoud5391/toty/releases/latest"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary btn-lg"
@@ -50,7 +50,20 @@ export default function Download() {
               <DownloadIcon size={20} />
               {t.download.btn}
             </motion.a>
+            <motion.a
+              href="https://github.com/mfoud5391/toty"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary btn-lg"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Github size={20} />
+              {t.download.btnSource}
+            </motion.a>
           </div>
+
+          <p className="dl-version">{t.download.version}</p>
 
           <div className="dl-reqs">
             {reqKeys.map((key, i) => (

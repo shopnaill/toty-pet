@@ -101,6 +101,7 @@ exe = EXE(
     console=False,          # GUI app — no console window
     disable_windowed_traceback=False,
     icon="assets/toty_archive.ico",
+    version="version_info.py",
 )
 
 coll = COLLECT(

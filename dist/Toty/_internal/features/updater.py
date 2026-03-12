@@ -24,9 +24,9 @@ from PyQt6.QtWidgets import (
 log = logging.getLogger("toty.updater")
 
 # ── Config ────────────────────────────────────────────────────────
-GITHUB_OWNER = "shopnaill"
-GITHUB_REPO = "toty-pet"
-RELEASES_URL = "https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
+GITHUB_OWNER = "mfoud5391"
+GITHUB_REPO = "toty"
+RELEASES_URL = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
 USER_AGENT = "Toty-Desktop-Pet-Updater/1.0"
 
 
@@ -84,6 +84,11 @@ class _CheckWorker(QThread):
                 "size": dl_size,
                 "html_url": data.get("html_url", ""),
             })
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                self.error.emit("no_releases")
+            else:
+                self.error.emit(f"HTTP Error {e.code}: {e.reason}")
         except Exception as e:
             self.error.emit(str(e))
 
@@ -258,10 +263,17 @@ class UpdateDialog(QDialog):
 
     def _on_check_error(self, err: str):
         C = self._C
-        self._status.setText(
-            f"<span style='color:{C.RED};'>❌ Failed to check for updates</span><br>"
-            f"<span style='color:{C.TEXT_DIM};'>{err}</span>"
-        )
+        if err == "no_releases":
+            self._status.setText(
+                f"<span style='color:{C.ACCENT};'>✅ You're up to date!</span><br>"
+                f"<span style='color:{C.TEXT_DIM};'>No releases published yet. "
+                f"v{self._current} is the latest version.</span>"
+            )
+        else:
+            self._status.setText(
+                f"<span style='color:{C.RED};'>❌ Failed to check for updates</span><br>"
+                f"<span style='color:{C.TEXT_DIM};'>{err}</span>"
+            )
 
     def _download_update(self):
         if not self._release or not self._release.get("url"):

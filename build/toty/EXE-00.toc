@@ -3,7 +3,7 @@
  False,
  True,
  ['D:\\Dev Games\\assets/toty_archive.ico'],
- None,
+ versioninfo.VSVersionInfo(ffi=versioninfo.FixedFileInfo(filevers=(15, 0, 0, 0), prodvers=(15, 0, 0, 0), mask=0x3f, flags=0x0, OS=0x40004, fileType=1, subtype=0x0, date=(0, 0)), kids=[versioninfo.StringFileInfo([versioninfo.StringTable('040904B0', [versioninfo.StringStruct('CompanyName', 'mfoud5391'), versioninfo.StringStruct('FileDescription', 'Toty Desktop Pet'), versioninfo.StringStruct('FileVersion', '15.0.0'), versioninfo.StringStruct('InternalName', 'Toty'), versioninfo.StringStruct('OriginalFilename', 'Toty.exe'), versioninfo.StringStruct('ProductName', 'Toty'), versioninfo.StringStruct('ProductVersion', '15.0.0'), versioninfo.StringStruct('LegalCopyright', '© 2026 mfoud5391')])]), versioninfo.VarFileInfo([versioninfo.VarStruct('Translation', [1033, 1200])])]),
  False,
  False,
  b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<assembly xmlns='
@@ -76,7 +76,7 @@
  [],
  False,
  False,
- 1773333104,
+ 1773336617,
  [('runw.exe',
    'C:\\Users\\Mohammad\\AppData\\Roaming\\Python\\Python312\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],

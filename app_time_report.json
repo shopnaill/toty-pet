@@ -150,9 +150,9 @@
     "🔔 Notification Manager": 6.0
   },
   "2026-03-12": {
-    "PowerShell": 156.5,
+    "PowerShell": 164.5,
     "server_bridge.py - Dev Games - Visual Studio Code": 2899.5,
-    "python": 3860.8,
+    "python": 4020.8,
     "Dev Games - File Explorer": 16.0,
     "Documents - File Explorer": 2.0,
     "Downloads - File Explorer": 1281.1,
@@ -178,9 +178,23 @@
     "updater.py - Dev Games - Visual Studio Code": 318.1,
     "● updater.py - Dev Games - Visual Studio Code": 20.0,
     "GitHub - Google Chrome": 8.0,
-    "shopnaill/toty-pet - Google Chrome": 2.0,
+    "shopnaill/toty-pet - Google Chrome": 4.0,
     "New notification": 14.0,
     "Gym Engine - Google Chrome": 2.0,
-    "gaze_guard_config.json - Dev Games - Visual Studio Code": 88.0
+    "gaze_guard_config.json - Dev Games - Visual Studio Code": 88.0,
+    "Toty Updater": 6.0,
+    "face_detection_yunet.onnx - Dev Games - Visual Studio Code": 410.2,
+    ".gitignore - Dev Games - Visual Studio Code": 208.6,
+    "New Tab - Google Chrome": 2.0,
+    "لوحة التحكم - 3afer - Google Chrome": 10.0,
+    "تعديل الدورات - 3afer - Google Chrome": 2.0,
+    "محاضرات الدورة - 3afer - Google Chrome": 10.0,
+    "تعديل نظري الفصل الأول - 3afer - Google Chrome": 16.0,
+    "الباقات - 3afer - Google Chrome": 6.0,
+    "إضافة الباقات - 3afer - Google Chrome": 152.0,
+    "تعديل الباقات - 3afer - Google Chrome": 104.0,
+    "الاشتراكات - 3afer - Google Chrome": 4.0,
+    "إضافة الاشتراكات - 3afer - Google Chrome": 10.0,
+    "المدفوعات - 3afer - Google Chrome": 8.0
   }
 }
