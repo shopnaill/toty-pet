@@ -1,0 +1,66 @@
+{
+  "name": "Ocean Wave",
+  "author": "Toty",
+  "description": "A cool deep-sea themed pet with teal body",
+
+  "body": {
+    "color": "#00838F",
+    "width": 60,
+    "height": 60,
+    "shading_steps": 40,
+    "specular_alpha": 90,
+    "rim_light": true
+  },
+
+  "limbs": {
+    "color": "#01579B",
+    "highlight_alpha": 160,
+    "arm_w": 14,
+    "arm_h": 16,
+    "leg_w": 16,
+    "leg_h": 18
+  },
+
+  "face": {
+    "eye_color": "#E0F7FA",
+    "eye_w": 7,
+    "eye_h": 12,
+    "eye_spacing": 18,
+    "mouth_width": 16,
+    "blush_color": "#80DEEA",
+    "blush_alpha": 150,
+    "blush_size": 8
+  },
+
+  "effects": {
+    "shadow_alpha": 40,
+    "shadow_ao_alpha": 70,
+    "glow_alpha": 100,
+    "glow_blur": 10
+  },
+
+  "state_colors": {
+    "idle":          { "body": "#00838F" },
+    "walk":          { "body": "#00838F" },
+    "run":           { "body": "#00838F" },
+    "crawl":         { "body": "#00838F" },
+    "carry":         { "body": "#00838F" },
+    "work":          { "body": "#006064" },
+    "happy":         { "body": "#26C6DA", "glow": "#B2EBF2" },
+    "dance":         { "body": "#00BCD4", "glow": "#E0F7FA" },
+    "excited":       { "body": "#0097A7" },
+    "sad":           { "body": "#37474F" },
+    "sleep":         { "body": "#004D40" },
+    "pray":          { "body": "#00695C", "glow": "#A7FFEB" },
+    "music":         { "body": "#7E57C2" },
+    "screenshot":    { "body": "#4DD0E1", "glow": "#E0F7FA" },
+    "notification":  { "body": "#FF8A65", "glow": "#FFE0B2" },
+    "level_up":      { "body": "#FFD54F", "glow": "#FFF9C4" },
+    "startup":       { "body": "#4DB6AC", "glow": "#B2DFDB" },
+    "shutdown":      { "body": "#37474F" },
+    "restart":       { "body": "#42A5F5", "glow": "#BBDEFB" },
+    "run_app":       { "body": "#5C6BC0", "glow": "#C5CAE9" },
+    "yawn":          { "body": "#00838F" },
+    "stretch":       { "body": "#00838F" }
+  }
+}

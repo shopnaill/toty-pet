@@ -1,0 +1,88 @@
+.shortcuts-section {
+  overflow: hidden;
+}
+
+.shortcuts-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.shortcuts-header .section-subtitle {
+  margin: 0 auto;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.shortcuts-group {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.shortcuts-group-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--teal);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.key-cap {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-bright);
+  font-weight: 600;
+  line-height: 1.4;
+  min-width: 24px;
+  text-align: center;
+}
+
+.key-plus {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  margin: 0 2px;
+}
+
+.shortcut-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: end;
+}
+
+@media (max-width: 768px) {
+  .shortcuts-grid { grid-template-columns: 1fr; }
+}

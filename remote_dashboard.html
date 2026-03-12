@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#070B09">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>Toty Remote</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#070B09;--bg2:#0D1411;--card:#131C17;--card-h:#192520;
+  --surface:#1E2B23;--border:rgba(74,222,128,.1);
+  --border-h:rgba(74,222,128,.25);--teal:#4ADE80;
+  --amber:#FBBF24;--red:#F87171;--blue:#60A5FA;--purple:#A78BFA;
+  --text:#D1D5DB;--text-dim:#6B7280;--white:#fff;
+  --radius:12px;--font:'Inter','Segoe UI',sans-serif;
+}
+html.light{
+  --bg:#F3F4F6;--bg2:#E5E7EB;--card:#FFFFFF;--card-h:#F9FAFB;
+  --surface:#E5E7EB;--border:rgba(0,0,0,.1);
+  --border-h:rgba(0,0,0,.2);--text:#1F2937;--text-dim:#6B7280;--white:#111827;
+}
+html{height:100%}
+body{font-family:var(--font);color:var(--text);background:var(--bg);min-height:100%}
+a{color:var(--teal);text-decoration:none}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--surface);border-radius:3px}
+
+/* ── Tabs ───────────────────────────────────────── */
+.header{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
+}
+.header h1{font-size:1.15rem;color:var(--white);font-weight:700}
+.header .dot{width:8px;height:8px;border-radius:50%;background:#EF4444;transition:background .3s}
+.header .dot.ok{background:var(--teal)}
+.tabs{display:flex;gap:2px;margin-left:auto;background:var(--surface);border-radius:8px;padding:2px}
+.tab{
+  padding:6px 14px;border-radius:6px;font-size:.8rem;cursor:pointer;
+  color:var(--text-dim);transition:all .2s;border:none;background:none;
+}
+.tab.active{background:var(--teal);color:var(--bg);font-weight:600}
+.tab:hover:not(.active){color:var(--text)}
+.tab-page{display:none;padding:16px 20px}
+.tab-page.active{display:block}
+
+/* ── Cards ───────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card h2{color:var(--white);font-size:.95rem;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.card-full{grid-column:1/-1}
+
+/* ── Meters ──────────────────────────────────────── */
+.meter{height:6px;background:var(--surface);border-radius:3px;overflow:hidden;margin:4px 0}
+.meter-fill{height:100%;border-radius:3px;transition:width .5s}
+.meter-fill.mood{background:linear-gradient(90deg,#EF4444,var(--amber),var(--teal))}
+.meter-fill.energy{background:linear-gradient(90deg,#6B7280,var(--amber))}
+.meter-fill.focus{background:linear-gradient(90deg,#818CF8,#A78BFA)}
+.meter-row{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.meter-row .tag{font-size:.75rem;color:var(--text-dim);width:50px}
+.meter-row .val{font-size:.75rem;color:var(--text);width:28px;text-align:right}
+.meter-row .meter{flex:1}
+
+/* ── Stat grid ───────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.stat-item{background:var(--surface);border-radius:8px;padding:8px;text-align:center}
+.stat-item .v{font-size:1.2rem;font-weight:700;color:var(--teal)}
+.stat-item .l{font-size:.65rem;color:var(--text-dim);margin-top:1px}
+
+/* ── Buttons ─────────────────────────────────────── */
+.btn{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:7px 13px;color:var(--text);font-size:.82rem;cursor:pointer;transition:all .2s;
+}
+.btn:hover{border-color:var(--teal);color:var(--white);background:rgba(74,222,128,.08)}
+.btn-teal{background:var(--teal);color:var(--bg);border-color:var(--teal);font-weight:600}
+.btn-teal:hover{filter:brightness(1.1)}
+.btn-amber{background:var(--amber);color:var(--bg);border-color:var(--amber);font-weight:600}
+.btn-red{background:rgba(248,113,113,.15);border-color:var(--red);color:var(--red)}
+.btn-row{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ── Inputs ──────────────────────────────────────── */
+.inp{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 12px;color:var(--text);font-size:.85rem;outline:none;width:100%;
+}
+.inp:focus{border-color:var(--teal)}
+.inp-sm{padding:6px 10px;font-size:.8rem}
+.inp-row{display:flex;gap:6px;margin-bottom:8px}
+.inp-row .inp{flex:1}
+.inp-row .btn{flex-shrink:0}
+.inp-num{width:60px;flex:none!important}
+
+/* ── Chat ────────────────────────────────────────── */
+.chat-msgs{max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px 0}
+.msg{max-width:80%;padding:8px 12px;border-radius:10px;font-size:.85rem;line-height:1.4;word-wrap:break-word}
+.msg.user{background:rgba(74,222,128,.12);align-self:flex-end;border-bottom-right-radius:4px}
+.msg.bot{background:var(--surface);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.sys{align-self:center;color:var(--text-dim);font-size:.75rem;font-style:italic}
+
+/* ── Screen viewer ───────────────────────────────── */
+.screen-wrap{position:relative;background:#000;border-radius:8px;overflow:hidden;cursor:crosshair}
+.screen-wrap canvas{width:100%;display:block}
+.screen-controls{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.screen-controls label{font-size:.75rem;color:var(--text-dim)}
+.screen-controls input[type=range]{width:80px;accent-color:var(--teal)}
+.screen-kb{
+  width:100%;margin-top:8px;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:8px;display:flex;gap:6px;flex-wrap:wrap;
+}
+.screen-kb .btn{font-size:.7rem;padding:4px 8px}
+
+/* ── System health ───────────────────────────────── */
+.sys-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.sys-item{background:var(--surface);border-radius:8px;padding:10px}
+.sys-item .v{font-size:1.1rem;font-weight:700}
+.sys-item .l{font-size:.7rem;color:var(--text-dim)}
+.sys-item .bar{height:4px;background:var(--bg2);border-radius:2px;margin-top:4px}
+.sys-item .bar-fill{height:100%;border-radius:2px;transition:width .5s}
+
+/* ── App time ────────────────────────────────────── */
+.app-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.app-bar-row .name{font-size:.75rem;width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.app-bar-row .bar{flex:1;height:8px;background:var(--surface);border-radius:4px;overflow:hidden}
+.app-bar-row .bar-fill{height:100%;background:var(--teal);border-radius:4px}
+.app-bar-row .time{font-size:.7rem;color:var(--text-dim);width:48px;text-align:right}
+
+/* ── Heatmap ─────────────────────────────────────── */
+.hm-row{display:flex;gap:2px;margin-bottom:2px}
+.hm-cell{width:20px;height:20px;border-radius:3px;font-size:.55rem;display:flex;align-items:center;justify-content:center;color:var(--text-dim)}
+
+/* ── Mood ─────────────────────────────────────────── */
+.mood-btns{display:flex;gap:8px;margin-bottom:8px}
+.mood-btn{
+  font-size:1.4rem;padding:6px 10px;border-radius:8px;cursor:pointer;
+  background:var(--surface);border:2px solid transparent;transition:all .2s;
+}
+.mood-btn:hover,.mood-btn.sel{border-color:var(--teal);transform:scale(1.1)}
+.mood-hist{font-size:.85rem;line-height:1.8}
+
+/* ── Wardrobe ────────────────────────────────────── */
+.wr-grid{display:flex;flex-wrap:wrap;gap:6px}
+.wr-item{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 12px;font-size:.8rem;cursor:pointer;transition:all .2s;
+}
+.wr-item:hover{border-color:var(--teal)}
+.wr-item.equipped{border-color:var(--teal);background:rgba(74,222,128,.1)}
+.wr-item.locked{opacity:.4;cursor:not-allowed}
+
+/* ── Notes ─────────────────────────────────────────── */
+.note-list{display:flex;flex-direction:column;gap:4px}
+.note-item{background:var(--surface);border-radius:6px;padding:6px 10px;font-size:.8rem}
+
+/* ── File browser ────────────────────────────────── */
+.file-list{max-height:280px;overflow-y:auto}
+.file-item{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;
+  font-size:.82rem;cursor:pointer;transition:background .15s;
+}
+.file-item:hover{background:var(--surface)}
+.file-item .icon{width:20px;text-align:center}
+.file-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-item .size{color:var(--text-dim);font-size:.7rem}
+
+/* ── Toast ───────────────────────────────────────── */
+.toast{
+  position:fixed;bottom:20px;right:20px;background:var(--card);
+  border:1px solid var(--teal);border-radius:10px;padding:10px 18px;
+  color:var(--teal);font-size:.85rem;z-index:99;opacity:0;
+  transform:translateY(10px);transition:all .3s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Auth ────────────────────────────────────────── */
+.auth-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.88);
+  display:flex;align-items:center;justify-content:center;z-index:100;
+}
+.auth-box{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:28px;width:360px;max-width:90vw;text-align:center;
+}
+.auth-box h2{color:var(--white);margin-bottom:6px;font-size:1.2rem}
+.auth-box p{color:var(--text-dim);font-size:.82rem;margin-bottom:16px}
+.auth-box .inp{text-align:center;font-family:monospace;margin-bottom:10px}
+.auth-box .btn-teal{width:100%;padding:10px}
+.auth-box .error{color:var(--red);font-size:.78rem;margin-top:6px}
+
+/* ── Process list ─────────────────────────────── */
+.proc-row{display:flex;align-items:center;gap:6px;padding:5px 4px;border-radius:4px;transition:background .15s}
+.proc-row:hover{background:var(--surface)}
+.proc-row .pname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proc-row .pval{width:56px;text-align:right;font-size:.75rem;color:var(--text-dim)}
+.proc-row .pkill{background:none;border:none;color:var(--red);cursor:pointer;font-size:.75rem;padding:2px 6px;border-radius:4px}
+.proc-row .pkill:hover{background:rgba(248,113,113,.15)}
+
+/* ── Drop zone ───────────────────────────────── */
+.drop-zone{
+  border:2px dashed var(--border);border-radius:8px;padding:16px;margin-bottom:8px;
+  text-align:center;transition:all .2s;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.drop-zone.active{border-color:var(--teal);background:rgba(74,222,128,.05)}
+.drop-text{color:var(--text-dim);font-size:.82rem}
+
+/* ── File items enhanced ─────────────────────── */
+.file-list{max-height:400px;overflow-y:auto}
+.file-item{
+  display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;
+  font-size:.82rem;cursor:pointer;transition:background .15s;position:relative;
+}
+.file-item:hover{background:var(--surface)}
+.file-item.selected{background:rgba(74,222,128,.1);border:1px solid var(--teal)}
+.file-item .icon{width:24px;text-align:center;font-size:1rem}
+.file-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-item .size{color:var(--text-dim);font-size:.7rem;width:50px;text-align:right}
+.file-item .factions{display:flex;gap:2px;opacity:0;transition:opacity .15s}
+.file-item:hover .factions{opacity:1}
+.file-item .factions button{background:none;border:none;cursor:pointer;font-size:.7rem;padding:2px 4px;border-radius:3px;color:var(--text-dim)}
+.file-item .factions button:hover{background:var(--surface);color:var(--text)}
+
+/* ── Preview modal ───────────────────────────── */
+.preview-modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:60;display:none;
+  align-items:center;justify-content:center;padding:20px;
+}
+.preview-modal.show{display:flex}
+.preview-box{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  max-width:90vw;max-height:90vh;width:700px;display:flex;flex-direction:column;overflow:hidden;
+}
+.preview-header{
+  display:flex;align-items:center;gap:8px;padding:12px 16px;
+  border-bottom:1px solid var(--border);font-size:.9rem;color:var(--white);
+}
+.preview-body{
+  flex:1;overflow:auto;padding:16px;min-height:200px;
+}
+.preview-body img{max-width:100%;border-radius:6px}
+.preview-body pre{font-size:.8rem;line-height:1.5;white-space:pre-wrap;word-break:break-all;color:var(--text);max-height:60vh;overflow:auto}
+.preview-body video,.preview-body audio{max-width:100%}
+
+/* ── Install banner ──────────────────────────── */
+.install-banner{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:40;
+  background:var(--card);border-top:1px solid var(--teal);padding:12px 20px;
+  text-align:center;font-size:.85rem;
+}
+.install-banner .btn-teal{margin-left:12px}
+
+@media(max-width:700px){
+  .grid{grid-template-columns:1fr}
+  .tabs{margin-left:0;margin-top:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:0;width:100%}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:6px 10px;font-size:.72rem;white-space:nowrap;flex-shrink:0}
+  .header{flex-wrap:wrap;padding:8px 12px;gap:8px}
+  .header h1{font-size:1rem}
+  .tab-page{padding:10px 12px}
+  .card{padding:12px}
+  .card h2{font-size:.88rem}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .screen-kb{flex-direction:column}
+  .screen-controls{flex-direction:column;align-items:flex-start}
+  .sys-grid{grid-template-columns:1fr}
+  .btn-row{flex-wrap:wrap;gap:4px}
+  .btn{padding:6px 10px;font-size:.78rem}
+  .inp-row{flex-wrap:wrap}
+  .proc-row .pname{max-width:120px}
+  body{padding-bottom:env(safe-area-inset-bottom)}
+}
+/* ── Fullscreen ───────────────────────────────── */
+.screen-wrap.fullscreen{position:fixed;inset:0;z-index:50;border-radius:0;cursor:crosshair}
+.screen-wrap.fullscreen canvas{width:100%;height:100%;object-fit:contain}
+/* ── Shortcuts overlay ────────────────────────── */
+.shortcuts-overlay{
+  position:absolute;top:8px;right:8px;background:rgba(0,0,0,.8);border-radius:8px;
+  padding:10px 14px;font-size:.7rem;line-height:1.7;color:var(--text);z-index:5;display:none;
+}
+.shortcuts-overlay.show{display:block}
+/* ── Ping indicator ─────────────────────────────── */
+.ping{font-size:.7rem;color:var(--text-dim);margin-left:8px}
+.ping.good{color:var(--teal)}.ping.ok{color:var(--amber)}.ping.bad{color:var(--red)}
+/* ── Schedule ──────────────────────────────────── */
+.sched-item{display:flex;align-items:center;gap:6px;font-size:.8rem;margin-bottom:3px}
+.sched-item .time{color:var(--teal);font-weight:600;width:48px}
+/* ── Sparkline mini chart ──────────────────────── */
+.sparkline{display:inline-flex;align-items:flex-end;gap:1px;height:20px}
+.sparkline .bar{width:4px;border-radius:1px;background:var(--teal);min-height:2px}
+</style>
+</head>
+<body>
+
+<!-- Auth -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <h2>🐾 Toty Remote</h2>
+    <p>Enter the access token to connect to your pet.</p>
+    <input class="inp" id="tokenInput" type="password" placeholder="Paste token…" autofocus>
+    <button class="btn btn-teal" onclick="authenticate()">Connect</button>
+    <div class="error" id="authError"></div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <span style="font-size:1.3rem">🐾</span>
+  <h1>Toty Remote</h1>
+  <div class="dot" id="statusDot"></div>
+  <span class="ping" id="pingLabel">—ms</span>
+  <div class="tabs">
+    <button class="tab active" data-tab="control">🎮 Pet</button>
+    <button class="tab" data-tab="pc">💻 PC</button>
+    <button class="tab" data-tab="screen">🖥️ Screen</button>
+    <button class="tab" data-tab="monitor">📊 Monitor</button>
+    <button class="tab" data-tab="tools">🛠️ Tools</button>
+  </div>
+  <button class="btn" onclick="toggleTheme()" style="margin-left:4px" title="Toggle theme">🌗</button>
+</div>
+
+<!-- ═══════════════ TAB: Control ═══════════════ -->
+<div class="tab-page active" id="page-control">
+<div class="grid">
+
+  <!-- Status -->
+  <div class="card">
+    <h2>📊 Pet Status</h2>
+    <div class="meter-row"><span class="tag">Mood</span><div class="meter"><div class="meter-fill mood" id="moodBar" style="width:0%"></div></div><span class="val" id="moodVal">-</span></div>
+    <div class="meter-row"><span class="tag">Energy</span><div class="meter"><div class="meter-fill energy" id="energyBar" style="width:0%"></div></div><span class="val" id="energyVal">-</span></div>
+    <div class="meter-row"><span class="tag">Focus</span><div class="meter"><div class="meter-fill focus" id="focusBar" style="width:0%"></div></div><span class="val" id="focusVal">-</span></div>
+    <div class="stat-grid">
+      <div class="stat-item"><div class="v" id="sLevel">-</div><div class="l">Level</div></div>
+      <div class="stat-item"><div class="v" id="sXP">-</div><div class="l">XP</div></div>
+      <div class="stat-item"><div class="v" id="sStreak">-</div><div class="l">Streak</div></div>
+      <div class="stat-item"><div class="v" id="sState">-</div><div class="l">State</div></div>
+      <div class="stat-item"><div class="v" id="sKeys">-</div><div class="l">Keys</div></div>
+      <div class="stat-item"><div class="v" id="sPomodoro">-</div><div class="l">Pomodoro</div></div>
+    </div>
+  </div>
+
+  <!-- Connected Devices -->
+  <div class="card">
+    <h2>📡 Connected Devices</h2>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span class="tag" style="font-size:.85rem" id="devicesCount">0 online</span>
+      <button class="btn" onclick="loadDevices()" style="margin-left:auto;font-size:.75rem">🔄 Refresh</button>
+    </div>
+    <div id="devicesList" style="font-size:.8rem;color:var(--text-dim)">Loading…</div>
+  </div>
+
+  <!-- Commands + Say -->
+  <div class="card">
+    <h2>⚡ Quick Commands</h2>
+    <div class="btn-row">
+      <button class="btn" onclick="cmd('dance')">💃 Dance</button>
+      <button class="btn" onclick="cmd('sleep')">😴 Sleep</button>
+      <button class="btn" onclick="cmd('idle')">😊 Idle</button>
+      <button class="btn" onclick="cmd('wave')">👋 Wave</button>
+      <button class="btn" onclick="cmd('happy')">😄 Happy</button>
+      <button class="btn" onclick="cmd('flip')">🤸 Flip</button>
+      <button class="btn" onclick="cmd('pomodoro_start')">🍅 Pomodoro</button>
+      <button class="btn btn-red" onclick="cmd('pomodoro_stop')">⏹ Stop</button>
+      <button class="btn" onclick="cmd('dnd_on')">🔕 DND</button>
+      <button class="btn" onclick="cmd('focus_on')">🎯 Focus</button>
+    </div>
+    <h2 style="margin-top:14px">💬 Make Pet Say</h2>
+    <div class="inp-row"><input class="inp" id="sayInp" placeholder="Type something…" onkeydown="if(event.key==='Enter')doSay()"><button class="btn btn-amber" onclick="doSay()">Say</button></div>
+    <h2 style="margin-top:10px">⏰ Reminders</h2>
+    <div class="inp-row"><input class="inp" id="remText" placeholder="Reminder…"><input class="inp inp-num" id="remMin" type="number" min="1" max="1440" value="5" placeholder="min"><button class="btn btn-teal" onclick="addRem()">Add</button></div>
+    <div id="remList" style="font-size:.8rem;color:var(--text-dim);white-space:pre-wrap">Loading…</div>
+  </div>
+
+  <!-- Chat -->
+  <div class="card card-full">
+    <h2>🤖 Chat with Toty</h2>
+    <div class="chat-msgs" id="chatMsgs"><div class="msg sys">Send a message to start chatting remotely.</div></div>
+    <div class="inp-row" style="margin-top:8px"><input class="inp" id="chatInp" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendChat()"><button class="btn btn-teal" id="chatSendBtn" onclick="sendChat()">Send</button></div>
+  </div>
+
+  <!-- Habits -->
+  <div class="card">
+    <h2>✅ Habits</h2>
+    <div id="habitList"></div>
+    <div class="inp-row" style="margin-top:8px"><input class="inp" id="habitName" placeholder="New habit…"><button class="btn btn-teal" onclick="addHabit()">Add</button></div>
+  </div>
+
+  <!-- Mood Journal -->
+  <div class="card">
+    <h2>💭 Mood Journal</h2>
+    <div class="mood-btns">
+      <span class="mood-btn" data-score="1" onclick="selMood(1)">😢</span>
+      <span class="mood-btn" data-score="2" onclick="selMood(2)">😔</span>
+      <span class="mood-btn" data-score="3" onclick="selMood(3)">😐</span>
+      <span class="mood-btn" data-score="4" onclick="selMood(4)">🙂</span>
+      <span class="mood-btn" data-score="5" onclick="selMood(5)">😄</span>
+    </div>
+    <div class="inp-row"><input class="inp inp-sm" id="moodNote" placeholder="Note (optional)…"><button class="btn btn-teal" onclick="logMood()">Log</button></div>
+    <div id="moodWeek" style="font-size:.85rem;margin-top:4px"></div>
+    <div id="moodHist" class="mood-hist" style="margin-top:6px;max-height:120px;overflow-y:auto"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════ TAB: PC Control ═══════════════ -->
+<div class="tab-page" id="page-pc">
+<div class="grid">
+
+  <!-- Volume Control -->
+  <div class="card">
+    <h2>🔊 Volume</h2>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <button class="btn" onclick="mediaKey('vol_down')" title="Vol -">🔉</button>
+      <input type="range" id="volSlider" min="0" max="100" value="50" style="flex:1;accent-color:var(--teal)" oninput="el('volVal').textContent=this.value+'%'" onchange="setVolume(+this.value)">
+      <span id="volVal" style="font-size:.85rem;width:36px;text-align:right">50%</span>
+      <button class="btn" onclick="mediaKey('vol_up')" title="Vol +">🔊</button>
+      <button class="btn" id="muteBtn" onclick="toggleMute()" title="Mute">🔇</button>
+    </div>
+    <div id="volStatus" style="font-size:.75rem;color:var(--text-dim)"></div>
+  </div>
+
+  <!-- Media Control -->
+  <div class="card">
+    <h2>🎵 Media</h2>
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn" onclick="mediaKey('prev')" style="font-size:1.3rem;padding:10px 16px">⏮</button>
+      <button class="btn btn-teal" onclick="mediaKey('play_pause')" style="font-size:1.5rem;padding:10px 20px">⏯</button>
+      <button class="btn" onclick="mediaKey('next')" style="font-size:1.3rem;padding:10px 16px">⏭</button>
+      <button class="btn btn-red" onclick="mediaKey('stop')" style="font-size:1.1rem;padding:10px 14px">⏹</button>
+    </div>
+  </div>
+
+  <!-- Brightness -->
+  <div class="card">
+    <h2>☀️ Brightness</h2>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span>🌙</span>
+      <input type="range" id="brightSlider" min="0" max="100" value="50" style="flex:1;accent-color:var(--amber)" oninput="el('brightVal').textContent=this.value+'%'" onchange="setBrightness(+this.value)">
+      <span id="brightVal" style="font-size:.85rem;width:36px;text-align:right">50%</span>
+      <span>☀️</span>
+    </div>
+    <div id="brightStatus" style="font-size:.75rem;color:var(--text-dim);margin-top:4px"></div>
+  </div>
+
+  <!-- Quick Launch -->
+  <div class="card">
+    <h2>🚀 Quick Launch</h2>
+    <div class="btn-row" style="flex-wrap:wrap">
+      <button class="btn" onclick="quickLaunch('explorer')">📁 Explorer</button>
+      <button class="btn" onclick="quickLaunch('browser')">🌐 Browser</button>
+      <button class="btn" onclick="quickLaunch('notepad')">📝 Notepad</button>
+      <button class="btn" onclick="quickLaunch('calc')">🔢 Calc</button>
+      <button class="btn" onclick="quickLaunch('taskmgr')">📊 Task Mgr</button>
+      <button class="btn" onclick="quickLaunch('cmd')">⬛ CMD</button>
+      <button class="btn" onclick="quickLaunch('settings')">⚙️ Settings</button>
+      <button class="btn" onclick="quickLaunch('snip')">✂️ Snip</button>
+    </div>
+  </div>
+
+  <!-- Power Management -->
+  <div class="card">
+    <h2>⚡ Power</h2>
+    <div class="btn-row">
+      <button class="btn" onclick="powerAction('lock')">🔒 Lock</button>
+      <button class="btn" onclick="powerAction('sleep')">😴 Sleep</button>
+      <button class="btn btn-amber" onclick="powerAction('restart')">🔄 Restart</button>
+      <button class="btn btn-red" onclick="powerAction('shutdown')">⏻ Shutdown</button>
+      <button class="btn" onclick="powerAction('cancel_shutdown')">❌ Cancel</button>
+    </div>
+  </div>
+
+  <!-- Network Info -->
+  <div class="card">
+    <h2>🌐 Network</h2>
+    <div id="netInfo" style="font-size:.82rem">Loading…</div>
+    <button class="btn" style="margin-top:6px" onclick="refreshNetwork()">🔄 Refresh</button>
+  </div>
+
+  <!-- Running Programs -->
+  <div class="card card-full">
+    <h2>📋 Running Programs <button class="btn" style="font-size:.7rem;padding:3px 8px;margin-left:auto" onclick="refreshProcesses()">🔄</button>
+      <select id="procSort" class="inp inp-sm" style="width:auto;margin-left:6px" onchange="refreshProcesses()">
+        <option value="cpu">Sort: CPU</option>
+        <option value="mem">Sort: Memory</option>
+      </select>
+    </h2>
+    <div id="procList" style="max-height:320px;overflow-y:auto;font-size:.8rem"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════ TAB: Screen ═══════════════ -->
+<div class="tab-page" id="page-screen">
+<div class="grid">
+  <div class="card card-full">
+    <h2>🖥️ Remote Screen <span id="screenFpsLabel" style="font-size:.7rem;color:var(--text-dim);margin-left:auto">Disconnected</span></h2>
+    <div class="screen-wrap" id="screenWrap">
+      <canvas id="screenCanvas" width="960" height="540"></canvas>
+      <div class="shortcuts-overlay" id="shortcutsOverlay">
+        <b>Keyboard Shortcuts</b><br>
+        Click canvas to focus &amp; type<br>
+        Ctrl+C/V/Z/A/S — combos<br>
+        Alt+Tab — switch window<br>
+        Esc — escape key<br>
+        Double-click — supported<br>
+        Drag — hold &amp; move<br>
+        Scroll — mouse wheel
+      </div>
+    </div>
+    <div class="screen-controls">
+      <button class="btn btn-teal" id="screenConnBtn" onclick="toggleScreen()">▶ Connect</button>
+      <button class="btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+      <button class="btn" id="shortcutsBtn" onclick="el('shortcutsOverlay').classList.toggle('show')">⌨ Shortcuts</button>
+      <label>Monitor <select id="scrMonitor" class="inp inp-sm" style="width:auto" onchange="sendScreenSettings()"><option value="-1">All</option></select></label>
+      <label>Quality <input type="range" id="scrQuality" min="10" max="80" value="35" oninput="sendScreenSettings()"></label>
+      <label>Scale <input type="range" id="scrScale" min="20" max="100" value="50" oninput="sendScreenSettings()"> <span id="scrScaleVal">50%</span></label>
+      <label>FPS <input type="range" id="scrFps" min="1" max="10" value="3" oninput="sendScreenSettings()"> <span id="scrFpsVal">3</span></label>
+      <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="scrCursor" checked onchange="sendScreenSettings()"> Cursor</label>
+      <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="scrWebp" checked onchange="sendScreenSettings()"> WebP</label>
+    </div>
+    <div class="screen-kb" id="screenKb">
+      <button class="btn" onclick="scrKey('escape')">Esc</button>
+      <button class="btn" onclick="scrKey('tab')">Tab</button>
+      <button class="btn" onclick="scrKey('enter')">Enter</button>
+      <button class="btn" onclick="scrKey('backspace')">⌫</button>
+      <button class="btn" onclick="scrKey('delete')">Del</button>
+      <button class="btn" onclick="scrKey('space')">Space</button>
+      <button class="btn" onclick="scrKey('up')">↑</button>
+      <button class="btn" onclick="scrKey('down')">↓</button>
+      <button class="btn" onclick="scrKey('left')">←</button>
+      <button class="btn" onclick="scrKey('right')">→</button>
+      <button class="btn" onclick="scrCombo(['ctrl','c'])">Ctrl+C</button>
+      <button class="btn" onclick="scrCombo(['ctrl','v'])">Ctrl+V</button>
+      <button class="btn" onclick="scrCombo(['ctrl','z'])">Ctrl+Z</button>
+      <button class="btn" onclick="scrCombo(['ctrl','a'])">Ctrl+A</button>
+      <button class="btn" onclick="scrCombo(['ctrl','s'])">Ctrl+S</button>
+      <button class="btn" onclick="scrCombo(['alt','tab'])">Alt+Tab</button>
+      <button class="btn" onclick="scrCombo(['alt','f4'])">Alt+F4</button>
+      <button class="btn" onclick="scrKey('f5')">F5</button>
+      <button class="btn" onclick="scrKey('f11')">F11</button>
+      <button class="btn" onclick="scrCombo(['win'])">⊞ Win</button>
+      <input class="inp inp-sm" id="scrTypeInp" placeholder="Type text…" style="flex:1;min-width:100px" onkeydown="if(event.key==='Enter'){scrType();event.preventDefault()}">
+      <button class="btn btn-teal" onclick="scrType()">Type</button>
+    </div>
+    <!-- Clipboard sync -->
+    <div style="margin-top:10px">
+      <h2>📋 Clipboard</h2>
+      <div class="inp-row"><input class="inp inp-sm" id="clipInp" placeholder="Clipboard text…"><button class="btn" onclick="getClip()">📥 Get</button><button class="btn btn-teal" onclick="setClip()">📤 Set</button></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════ TAB: Monitor ═══════════════ -->
+<div class="tab-page" id="page-monitor">
+<div class="grid">
+
+  <!-- System Health -->
+  <div class="card">
+    <h2>💻 System Health</h2>
+    <div class="sys-grid" id="sysGrid">
+      <div class="sys-item"><div class="v" id="sysCpu" style="color:var(--teal)">-</div><div class="l">CPU</div><div class="bar"><div class="bar-fill" id="sysCpuBar" style="width:0%;background:var(--teal)"></div></div></div>
+      <div class="sys-item"><div class="v" id="sysRam" style="color:var(--amber)">-</div><div class="l">RAM</div><div class="bar"><div class="bar-fill" id="sysRamBar" style="width:0%;background:var(--amber)"></div></div></div>
+      <div class="sys-item"><div class="v" id="sysDisk" style="color:var(--blue)">-</div><div class="l">Disk</div><div class="bar"><div class="bar-fill" id="sysDiskBar" style="width:0%;background:var(--blue)"></div></div></div>
+      <div class="sys-item"><div class="v" id="sysBat" style="color:var(--purple)">-</div><div class="l">Battery</div><div class="bar"><div class="bar-fill" id="sysBatBar" style="width:0%;background:var(--purple)"></div></div></div>
+    </div>
+  </div>
+
+  <!-- App Time -->
+  <div class="card">
+    <h2>⏱️ App Time (Today)</h2>
+    <div id="appTimeList" style="max-height:240px;overflow-y:auto"></div>
+  </div>
+
+  <!-- Keyboard Heatmap -->
+  <div class="card">
+    <h2>⌨️ Keyboard Activity</h2>
+    <div id="heatmapChart"></div>
+  </div>
+
+  <!-- Active Window -->
+  <div class="card">
+    <h2>🪟 Active Window</h2>
+    <div id="activeWindow" style="font-size:.85rem;color:var(--text);word-break:break-all">-</div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════ TAB: Tools ═══════════════ -->
+<div class="tab-page" id="page-tools">
+<div class="grid">
+
+  <!-- Wardrobe -->
+  <div class="card">
+    <h2>👗 Wardrobe</h2>
+    <div class="wr-grid" id="wardrobeGrid"></div>
+    <div class="inp-row" style="margin-top:8px"><button class="btn btn-red" onclick="unequipWr()">Unequip</button></div>
+  </div>
+
+  <!-- Memory -->
+  <div class="card">
+    <h2>🧠 Pet Memory</h2>
+    <div class="inp-row"><input class="inp inp-sm" id="memText" placeholder="Remember something…"><button class="btn btn-teal" onclick="doRemember()">Remember</button></div>
+    <div class="inp-row"><input class="inp inp-sm" id="memQuery" placeholder="Recall query…"><button class="btn" onclick="doRecall()">Recall</button></div>
+    <div id="memResult" style="font-size:.8rem;white-space:pre-wrap;max-height:150px;overflow-y:auto;color:var(--text-dim)"></div>
+  </div>
+
+  <!-- Sticky Notes -->
+  <div class="card">
+    <h2>🗒️ Sticky Notes</h2>
+    <div class="inp-row"><input class="inp inp-sm" id="noteText" placeholder="New note…"><button class="btn btn-teal" onclick="createNote()">Create</button><button class="btn" onclick="toggleNotes()">Toggle</button></div>
+    <div class="note-list" id="noteList"></div>
+  </div>
+
+  <!-- Screenshot -->
+  <div class="card">
+    <h2>📸 Screenshot</h2>
+    <button class="btn btn-teal" onclick="takeScreenshot()">📸 Capture Screenshot</button>
+    <div id="screenshotPreview" style="margin-top:8px"></div>
+  </div>
+
+  <!-- Backup -->
+  <div class="card">
+    <h2>💾 Backup</h2>
+    <button class="btn btn-teal" onclick="createBackup()">📦 Create Backup</button>
+    <div id="backupList" style="margin-top:8px;font-size:.8rem"></div>
+  </div>
+
+  <!-- Scheduled Commands -->
+  <div class="card">
+    <h2>📅 Scheduled Commands</h2>
+    <div class="inp-row">
+      <input class="inp inp-sm" id="schedCmd" placeholder="Command…">
+      <input class="inp inp-num" id="schedHour" type="number" min="0" max="23" value="9" placeholder="H">
+      <span style="color:var(--text-dim)">:</span>
+      <input class="inp inp-num" id="schedMin" type="number" min="0" max="59" value="0" placeholder="M">
+      <button class="btn btn-teal" onclick="addSchedule()">Add</button>
+    </div>
+    <div id="schedList"></div>
+  </div>
+
+  <!-- Data Export -->
+  <div class="card">
+    <h2>📤 Data Export</h2>
+    <div class="btn-row">
+      <a class="btn" id="exportMood" href="#" onclick="exportData('mood');return false">📊 Mood CSV</a>
+      <a class="btn" id="exportHabits" href="#" onclick="exportData('habits');return false">✅ Habits CSV</a>
+      <a class="btn" id="exportAppTime" href="#" onclick="exportData('app-time');return false">⏱ App Time CSV</a>
+    </div>
+  </div>
+
+  <!-- Token Management -->
+  <div class="card">
+    <h2>🔑 Security</h2>
+    <div class="btn-row">
+      <button class="btn" onclick="showToken()">👁 Show Token</button>
+      <button class="btn btn-red" onclick="rotateToken()">🔄 Rotate Token</button>
+    </div>
+    <div id="tokenDisplay" style="font-size:.75rem;margin-top:6px;word-break:break-all;color:var(--text-dim)"></div>
+  </div>
+
+  <!-- File Sharing -->
+  <div class="card card-full">
+    <h2>📁 File Sharing
+      <button class="btn" style="font-size:.7rem;padding:3px 8px;margin-left:auto" onclick="browseDir(currentPath)">🔄</button>
+    </h2>
+
+    <!-- Path bar -->
+    <div class="inp-row" style="margin-bottom:6px">
+      <button class="btn" onclick="browseUp()" title="Go up">⬆</button>
+      <span id="filePath" style="font-size:.8rem;color:var(--text-dim);flex:1;padding:6px 10px;background:var(--surface);border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">/</span>
+      <input class="inp inp-sm" id="fileFilter" placeholder="🔍 Filter…" style="width:120px;flex:none" oninput="filterFiles()">
+    </div>
+
+    <!-- Toolbar -->
+    <div class="btn-row" style="margin-bottom:8px">
+      <label class="btn btn-teal" style="display:inline-flex;align-items:center;gap:4px;cursor:pointer">
+        📤 Upload <input type="file" id="uploadFileInput" style="display:none" multiple onchange="uploadFiles()">
+      </label>
+      <button class="btn" onclick="promptNewFolder()">📁 New Folder</button>
+      <button class="btn btn-red" id="deleteBtn" style="display:none" onclick="deleteSelected()">🗑️ Delete</button>
+    </div>
+
+    <!-- Drag & drop zone -->
+    <div class="drop-zone" id="dropZone" ondragover="event.preventDefault();this.classList.add('active')" ondragleave="this.classList.remove('active')" ondrop="handleDrop(event)">
+      <div class="drop-text">📥 Drop files here to upload</div>
+      <div id="uploadProgress" style="display:none;margin-top:8px">
+        <div class="meter"><div class="meter-fill" id="uploadBar" style="background:var(--teal);width:0%"></div></div>
+        <span id="uploadLabel" style="font-size:.7rem;color:var(--text-dim)"></span>
+      </div>
+    </div>
+
+    <!-- File list -->
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- File preview modal -->
+<div class="preview-modal" id="previewModal" onclick="if(event.target===this)closePreview()">
+  <div class="preview-box">
+    <div class="preview-header">
+      <span id="previewName" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">File</span>
+      <span id="previewSize" style="font-size:.75rem;color:var(--text-dim);margin-right:8px"></span>
+      <button class="btn" onclick="downloadPreviewFile()">💾 Save</button>
+      <button class="btn btn-red" onclick="closePreview()" style="margin-left:4px">✕</button>
+    </div>
+    <div class="preview-body" id="previewBody"></div>
+  </div>
+</div>
+
+<div class="install-banner" id="installBanner">
+  📲 Install Toty Remote on your device
+  <button class="btn btn-teal" onclick="installPWA()">Install</button>
+  <button class="btn" onclick="el('installBanner').style.display='none'" style="margin-left:4px">✕</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═════════════════════════════════════════════════
+//  GLOBALS
+// ═════════════════════════════════════════════════
+let TOKEN = localStorage.getItem('toty_token') || '';
+const BASE = location.origin;
+let statusInterval = null;
+let screenWs = null;
+let screenConnected = false;
+let currentPath = '';
+let selectedMood = 3;
+let chatHistory = JSON.parse(localStorage.getItem('toty_chat_hist') || '[]');
+let cmdHistory = JSON.parse(localStorage.getItem('toty_cmd_hist') || '[]');
+let pingMs = 0;
+let _notifEnabled = localStorage.getItem('toty_notif') !== 'false';
+let _prevMood = 100;
+
+// ═════════════════════════════════════════════════
+//  AUTH
+// ═════════════════════════════════════════════════
+function authenticate() {
+  const val = document.getElementById('tokenInput').value.trim();
+  const err = document.getElementById('authError');
+  if (!val) { err.textContent = 'Token required'; return; }
+  api('/api/status', {}, val).then(() => {
+    TOKEN = val;
+    localStorage.setItem('toty_token', val);
+    document.getElementById('authOverlay').style.display = 'none';
+    startDashboard();
+  }).catch(() => { err.textContent = 'Invalid token or pet unreachable'; });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Restore theme
+  if (localStorage.getItem('toty_theme') === 'light') document.documentElement.classList.add('light');
+  // Restore chat history
+  chatHistory.forEach(m => addMsg(m.text, m.type, true));
+
+  if (TOKEN) {
+    api('/api/status').then(() => {
+      document.getElementById('authOverlay').style.display = 'none';
+      startDashboard();
+    }).catch(() => { TOKEN = ''; localStorage.removeItem('toty_token'); });
+  }
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-page').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('page-' + t.dataset.tab).classList.add('active');
+    });
+  });
+});
+
+// ═════════════════════════════════════════════════
+//  THEME TOGGLE
+// ═════════════════════════════════════════════════
+function toggleTheme() {
+  document.documentElement.classList.toggle('light');
+  localStorage.setItem('toty_theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+}
+
+// ═════════════════════════════════════════════════
+//  API HELPER
+// ═════════════════════════════════════════════════
+function api(path, opts = {}, tok) {
+  return fetch(BASE + path, {
+    ...opts,
+    headers: {'Authorization': 'Bearer ' + (tok || TOKEN), 'Content-Type': 'application/json', ...(opts.headers||{})},
+  }).then(r => { if(!r.ok) throw new Error(r.statusText); return r.json(); });
+}
+function apiRaw(path, opts = {}) {
+  return fetch(BASE + path, {
+    ...opts,
+    headers: {'Authorization': 'Bearer ' + TOKEN, ...(opts.headers||{})},
+  });
+}
+
+// ═════════════════════════════════════════════════
+//  PING
+// ═════════════════════════════════════════════════
+function measurePing() {
+  const start = performance.now();
+  api('/api/ping').then(() => {
+    pingMs = Math.round(performance.now() - start);
+    const label = el('pingLabel');
+    label.textContent = pingMs + 'ms';
+    label.className = 'ping ' + (pingMs < 50 ? 'good' : pingMs < 150 ? 'ok' : 'bad');
+  }).catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  NOTIFICATION SOUND
+// ═════════════════════════════════════════════════
+function playNotif() {
+  if (!_notifEnabled) return;
+  try { const a = new AudioContext(); const o = a.createOscillator(); const g = a.createGain();
+    o.connect(g); g.connect(a.destination); o.frequency.value=880; g.gain.value=0.1;
+    o.start(); o.stop(a.currentTime+0.15); } catch(e){}
+}
+
+// ═════════════════════════════════════════════════
+//  DASHBOARD START
+// ═════════════════════════════════════════════════
+function startDashboard() {
+  refreshStatus(); refreshReminders(); refreshHabits(); refreshMood(); refreshWardrobe(); refreshNotes(); browseDir(''); refreshSchedule();
+  statusInterval = setInterval(refreshStatus, 3000);
+  setInterval(() => { refreshReminders(); refreshHabits(); }, 10000);
+  setInterval(refreshSystem, 5000);
+  refreshSystem(); refreshAppTime(); refreshHeatmap();
+  setInterval(refreshAppTime, 30000);
+  setInterval(refreshHeatmap, 60000);
+  setInterval(measurePing, 10000);
+  measurePing();
+  loadMonitors();
+  refreshVolume(); refreshBrightness(); refreshNetwork();
+  loadDevices(); setInterval(loadDevices, 5000);
+}
+
+// ═════════════════════════════════════════════════
+//  STATUS
+// ═════════════════════════════════════════════════
+function refreshStatus() {
+  api('/api/status').then(d => {
+    document.getElementById('statusDot').classList.add('ok');
+    set('moodBar', 'width', d.mood+'%'); set('moodVal', 'text', Math.round(d.mood));
+    set('energyBar', 'width', d.energy+'%'); set('energyVal', 'text', Math.round(d.energy));
+    set('focusBar', 'width', d.focus+'%'); set('focusVal', 'text', Math.round(d.focus));
+    el('sLevel').textContent = d.level; el('sXP').textContent = d.xp;
+    el('sStreak').textContent = d.streak; el('sState').textContent = d.state || '-';
+    el('sKeys').textContent = d.keystrokes;
+    el('sPomodoro').textContent = d.pomodoro.active ? Math.ceil(d.pomodoro.remaining/60)+'m' : 'Off';
+    el('activeWindow').textContent = d.active_window || '-';
+    // Mood drop notification
+    if (d.mood < 30 && _prevMood >= 30) { playNotif(); toast('⚠ Pet mood is low!'); }
+    _prevMood = d.mood;
+  }).catch(() => { document.getElementById('statusDot').classList.remove('ok'); });
+}
+function set(id, prop, val) { const e = el(id); if(prop==='width') e.style.width=val; else e.textContent=val; }
+function el(id) { return document.getElementById(id); }
+
+// ═════════════════════════════════════════════════
+//  CONNECTED DEVICES
+// ═════════════════════════════════════════════════
+function loadDevices() {
+  api('/api/devices').then(d => {
+    const devices = d.devices || [];
+    const active = devices.filter(x => x.active);
+    const inactive = devices.filter(x => !x.active);
+    el('devicesCount').textContent = active.length + ' online' + (inactive.length ? ', ' + inactive.length + ' away' : '');
+    if (!devices.length) {
+      el('devicesList').innerHTML = '<span style="color:var(--text-dim)">No devices connected yet</span>';
+      return;
+    }
+    el('devicesList').innerHTML = devices.map(d => {
+      const dot = d.active ? '🟢' : '⚫';
+      const style = d.active ? 'color:var(--text)' : 'color:var(--text-dim);opacity:.6';
+      return `<div style="${style};padding:3px 0;display:flex;align-items:center;gap:6px">
+        <span>${d.emoji}</span>
+        <span style="flex:1">${d.name}</span>
+        <span style="font-size:.7rem">${dot}</span>
+        <span style="font-size:.65rem;color:var(--text-dim)">${d.ip}</span>
+      </div>`;
+    }).join('');
+  }).catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  COMMANDS & SAY
+// ═════════════════════════════════════════════════
+function cmd(c) {
+  cmdHistory.unshift(c); if(cmdHistory.length>20)cmdHistory.pop();
+  localStorage.setItem('toty_cmd_hist', JSON.stringify(cmdHistory));
+  api('/api/command', {method:'POST', body:JSON.stringify({command:c})}).then(d=>toast(d.result)).catch(e=>toast('Error: '+e.message));
+}
+function doSay() { const t=el('sayInp').value.trim(); if(!t)return; api('/api/say',{method:'POST',body:JSON.stringify({text:t})}).then(()=>{toast('Pet says: '+t);el('sayInp').value=''}).catch(e=>toast('Error: '+e.message)); }
+
+// ═════════════════════════════════════════════════
+//  REMINDERS
+// ═════════════════════════════════════════════════
+function refreshReminders() { api('/api/reminders').then(d=>{el('remList').textContent=d.reminders||'No active reminders'}).catch(()=>{}); }
+function addRem() { const t=el('remText').value.trim(),m=parseFloat(el('remMin').value); if(!t||!m)return; api('/api/reminders',{method:'POST',body:JSON.stringify({text:t,minutes:m})}).then(d=>{toast(d.result);el('remText').value='';refreshReminders();playNotif()}).catch(e=>toast('Error: '+e.message)); }
+
+// ═════════════════════════════════════════════════
+//  CHAT (with history persistence)
+// ═════════════════════════════════════════════════
+function sendChat() {
+  const inp=el('chatInp'),msg=inp.value.trim(); if(!msg)return; inp.value=''; addMsg(msg,'user');
+  el('chatSendBtn').disabled=true;
+  api('/api/chat',{method:'POST',body:JSON.stringify({message:msg})})
+    .then(d=>addMsg(d.reply,'bot')).catch(e=>addMsg('Error: '+e.message,'sys'))
+    .finally(()=>el('chatSendBtn').disabled=false);
+}
+function addMsg(t,c,noSave) {
+  const d=document.createElement('div'); d.className='msg '+c; d.textContent=t;
+  el('chatMsgs').appendChild(d); el('chatMsgs').scrollTop=el('chatMsgs').scrollHeight;
+  if (!noSave) { chatHistory.push({text:t,type:c}); if(chatHistory.length>50)chatHistory.shift();
+    localStorage.setItem('toty_chat_hist', JSON.stringify(chatHistory)); }
+}
+
+// ═════════════════════════════════════════════════
+//  HABITS (with sparkline streak)
+// ═════════════════════════════════════════════════
+function refreshHabits() {
+  api('/api/habits').then(d => {
+    let h = '';
+    for (const [name, info] of Object.entries(d)) {
+      const pct = Math.min(100, (info.today / info.goal) * 100);
+      const streak = info.streak || 0;
+      // Mini sparkline for streak
+      const bars = [];
+      for (let i=0; i<Math.min(streak,7); i++) bars.push('<span class="bar" style="height:'+Math.max(4,(i+1)*3)+'px"></span>');
+      const sparkHtml = bars.length ? '<span class="sparkline">'+bars.join('')+'</span>' : '';
+      h += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:1rem">${info.icon}</span>
+        <span style="flex:1;font-size:.82rem">${name} (${info.today}/${info.goal}) ${sparkHtml} <span style="font-size:.65rem;color:var(--text-dim)">${streak}d streak</span></span>
+        <div class="meter" style="width:60px"><div class="meter-fill" style="width:${pct}%;background:var(--teal)"></div></div>
+        <button class="btn" style="font-size:.7rem;padding:3px 8px" onclick="logHabit('${name.replace(/'/g,"\\'")}')">+1</button>
+      </div>`;
+    }
+    el('habitList').innerHTML = h || '<span style="color:var(--text-dim);font-size:.8rem">No habits yet</span>';
+  }).catch(() => {});
+}
+function logHabit(n) { api('/api/habits/log',{method:'POST',body:JSON.stringify({name:n,count:1})}).then(d=>{toast(d.result);refreshHabits()}).catch(e=>toast('Error: '+e.message)); }
+function addHabit() { const n=el('habitName').value.trim(); if(!n)return; api('/api/habits',{method:'POST',body:JSON.stringify({name:n,goal:1,icon:'✅'})}).then(d=>{toast(d.result);el('habitName').value='';refreshHabits()}).catch(e=>toast('Error: '+e.message)); }
+
+// ═════════════════════════════════════════════════
+//  MOOD JOURNAL
+// ═════════════════════════════════════════════════
+function selMood(s) { selectedMood=s; document.querySelectorAll('.mood-btn').forEach(b=>b.classList.toggle('sel',+b.dataset.score===s)); }
+function logMood() { api('/api/mood',{method:'POST',body:JSON.stringify({score:selectedMood,note:el('moodNote').value})}).then(d=>{toast(d.result);el('moodNote').value='';refreshMood()}).catch(e=>toast('Error: '+e.message)); }
+function refreshMood() {
+  api('/api/mood').then(d => {
+    el('moodWeek').textContent = 'This week: ' + (d.week || '-');
+    const emojis = {1:'😢',2:'😔',3:'😐',4:'🙂',5:'😄'};
+    el('moodHist').innerHTML = (d.history||[]).map(e => `<div>${e.date} ${emojis[e.score]||'?'} ${e.note||''}</div>`).join('');
+  }).catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  WARDROBE
+// ═════════════════════════════════════════════════
+const WR_ITEMS = ['crown','party_hat','bow_tie','wizard_hat','cape','flower','star_badge','sunglasses','halo','pirate_hat'];
+const WR_ICONS = {crown:'👑',party_hat:'🎉',bow_tie:'🎀',wizard_hat:'🧙',cape:'🦸',flower:'🌸',star_badge:'⭐',sunglasses:'🕶️',halo:'😇',pirate_hat:'🏴‍☠️'};
+function refreshWardrobe() {
+  api('/api/wardrobe').then(d => {
+    el('wardrobeGrid').innerHTML = WR_ITEMS.map(id => {
+      const unlocked = d.unlocked.includes(id), equipped = d.equipped === id;
+      return `<div class="wr-item${equipped?' equipped':''}${!unlocked?' locked':''}" onclick="${unlocked?"equipWr('"+id+"')":''}">${WR_ICONS[id]||'?'} ${id}${equipped?' ✓':''}</div>`;
+    }).join('');
+  }).catch(() => {});
+}
+function equipWr(id) { api('/api/wardrobe/equip',{method:'POST',body:JSON.stringify({item_id:id})}).then(d=>{toast(d.result);refreshWardrobe()}).catch(e=>toast('Error: '+e.message)); }
+function unequipWr() { api('/api/wardrobe/unequip',{method:'POST'}).then(d=>{toast(d.result);refreshWardrobe()}).catch(e=>toast('Error: '+e.message)); }
+
+// ═════════════════════════════════════════════════
+//  MEMORY
+// ═════════════════════════════════════════════════
+function doRemember() { const t=el('memText').value.trim(); if(!t)return; api('/api/memory/remember',{method:'POST',body:JSON.stringify({text:t,topic:''})}).then(d=>{toast(d.result);el('memText').value=''}).catch(e=>toast('Error: '+e.message)); }
+function doRecall() { api('/api/memory/recall',{method:'POST',body:JSON.stringify({query:el('memQuery').value})}).then(d=>{el('memResult').textContent=d.result||'Nothing found'}).catch(e=>toast('Error: '+e.message)); }
+
+// ═════════════════════════════════════════════════
+//  STICKY NOTES
+// ═════════════════════════════════════════════════
+function refreshNotes() {
+  api('/api/notes').then(d => {
+    el('noteList').innerHTML = (d.notes||[]).map(n => `<div class="note-item">📝 ${n.text.substring(0,80)}${n.text.length>80?'…':''}</div>`).join('') || '<span style="color:var(--text-dim);font-size:.8rem">No notes</span>';
+  }).catch(() => {});
+}
+function createNote() { const t=el('noteText').value.trim(); if(!t)return; api('/api/notes',{method:'POST',body:JSON.stringify({text:t})}).then(d=>{toast(d.result);el('noteText').value='';refreshNotes()}).catch(e=>toast('Error: '+e.message)); }
+function toggleNotes() { api('/api/notes/toggle',{method:'POST'}).then(()=>toast('Notes toggled')).catch(e=>toast('Error: '+e.message)); }
+
+// ═════════════════════════════════════════════════
+//  SYSTEM HEALTH
+// ═════════════════════════════════════════════════
+function refreshSystem() {
+  api('/api/system').then(d => {
+    el('sysCpu').textContent = (d.cpu_percent||0)+'%'; el('sysCpuBar').style.width = (d.cpu_percent||0)+'%';
+    el('sysRam').textContent = (d.ram_percent||0)+'%'; el('sysRamBar').style.width = (d.ram_percent||0)+'%';
+    el('sysDisk').textContent = (d.disk_percent||0)+'%'; el('sysDiskBar').style.width = (d.disk_percent||0)+'%';
+    const bat = d.battery_percent; el('sysBat').textContent = bat!=null ? bat+'%'+(d.battery_charging?'⚡':'') : 'N/A';
+    el('sysBatBar').style.width = (bat||0)+'%';
+  }).catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  APP TIME
+// ═════════════════════════════════════════════════
+function refreshAppTime() {
+  api('/api/app-time').then(d => {
+    const entries = Object.entries(d).sort((a,b)=>b[1]-a[1]).slice(0,15);
+    const max = entries[0]?entries[0][1]:1;
+    el('appTimeList').innerHTML = entries.map(([name,mins])=>{
+      const pct = (mins/max*100).toFixed(0);
+      return `<div class="app-bar-row"><span class="name" title="${name}">${name}</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span class="time">${mins.toFixed(0)}m</span></div>`;
+    }).join('') || '<span style="color:var(--text-dim);font-size:.8rem">No data</span>';
+  }).catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  KEYBOARD HEATMAP
+// ═════════════════════════════════════════════════
+function refreshHeatmap() {
+  api('/api/heatmap').then(d => {
+    const today = d.today || {};
+    const max = Math.max(1, ...Object.values(today));
+    let html = '<div class="hm-row">';
+    for (let h=0; h<24; h++) {
+      const v = today[h] || 0;
+      const intensity = v/max;
+      const bg = intensity > 0 ? `rgba(74,222,128,${0.1+intensity*0.8})` : 'var(--surface)';
+      html += `<div class="hm-cell" style="background:${bg}" title="${h}:00 — ${v} keys">${h}</div>`;
+    }
+    html += '</div>';
+    el('heatmapChart').innerHTML = html;
+  }).catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  SCREENSHOT
+// ═════════════════════════════════════════════════
+function takeScreenshot() {
+  apiRaw('/api/screenshot').then(r=>{if(!r.ok)throw new Error();return r.blob()}).then(blob=>{
+    const url = URL.createObjectURL(blob);
+    el('screenshotPreview').innerHTML = `<img src="${url}" style="max-width:100%;border-radius:8px;margin-top:4px"><br><a href="${url}" download="screenshot.png" class="btn" style="margin-top:6px;display:inline-block">💾 Download</a>`;
+    toast('Screenshot captured');
+  }).catch(()=>toast('Screenshot failed'));
+}
+
+// ═════════════════════════════════════════════════
+//  BACKUP
+// ═════════════════════════════════════════════════
+function createBackup() {
+  api('/api/backup',{method:'POST'}).then(d=>{toast('Backup created: '+d.path);refreshBackups()}).catch(e=>toast('Backup failed'));
+}
+function refreshBackups() {
+  api('/api/backups').then(d=>{
+    el('backupList').innerHTML = (d.backups||[]).map(b=>`<div>📦 ${b}</div>`).join('') || 'No backups';
+  }).catch(()=>{});
+}
+
+// ═════════════════════════════════════════════════
+//  SCHEDULED COMMANDS
+// ═════════════════════════════════════════════════
+function refreshSchedule() {
+  api('/api/schedule').then(d => {
+    el('schedList').innerHTML = (d.schedules||[]).map(s =>
+      `<div class="sched-item"><span class="time">${String(s.hour).padStart(2,'0')}:${String(s.minute).padStart(2,'0')}</span>
+       <span style="flex:1">${s.command}</span>
+       <button class="btn btn-red" style="font-size:.65rem;padding:2px 6px" onclick="removeSched(${s.id})">✕</button></div>`
+    ).join('') || '<span style="color:var(--text-dim);font-size:.8rem">No schedules</span>';
+  }).catch(() => {});
+}
+function addSchedule() {
+  const cmd = el('schedCmd').value.trim(), h = +el('schedHour').value, m = +el('schedMin').value;
+  if (!cmd) return;
+  api('/api/schedule',{method:'POST',body:JSON.stringify({command:cmd,hour:h,minute:m})})
+    .then(d => { toast(d.result); el('schedCmd').value=''; refreshSchedule(); })
+    .catch(e => toast('Error: '+e.message));
+}
+function removeSched(id) {
+  api('/api/schedule',{method:'DELETE',body:JSON.stringify({id})})
+    .then(d => { toast(d.result); refreshSchedule(); })
+    .catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  DATA EXPORT
+// ═════════════════════════════════════════════════
+function exportData(type) {
+  apiRaw('/api/export/'+type).then(r=>{if(!r.ok)throw new Error();return r.blob()}).then(blob=>{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=type+'.csv'; a.click();
+    URL.revokeObjectURL(url); toast('Exported '+type);
+  }).catch(()=>toast('Export failed'));
+}
+
+// ═════════════════════════════════════════════════
+//  TOKEN MANAGEMENT
+// ═════════════════════════════════════════════════
+function showToken() { el('tokenDisplay').textContent = TOKEN; }
+function rotateToken() {
+  if(!confirm('Rotate token? Current token will stop working.'))return;
+  api('/api/token/rotate',{method:'POST'}).then(d=>{
+    TOKEN=d.token; localStorage.setItem('toty_token',TOKEN);
+    el('tokenDisplay').textContent='New: '+TOKEN;
+    toast('Token rotated');
+  }).catch(e=>toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  FILE SHARING
+// ═════════════════════════════════════════════════
+let _allFiles = []; // cached file list for filtering
+let _selectedFile = null; // currently selected file path
+let _previewPath = ''; // file being previewed
+
+function browseDir(path) {
+  currentPath = path;
+  _selectedFile = null;
+  el('filePath').textContent = '/' + (path || '');
+  if (el('deleteBtn')) el('deleteBtn').style.display = 'none';
+  if (el('fileFilter')) el('fileFilter').value = '';
+  api('/api/files?path='+encodeURIComponent(path)).then(d => {
+    _allFiles = d.files || [];
+    renderFileList(_allFiles);
+  }).catch(() => {});
+}
+
+function renderFileList(files) {
+  const path = currentPath;
+  el('fileList').innerHTML = files.map(f => {
+    const icon = getFileIcon(f);
+    const sz = f.is_dir ? '' : formatSize(f.size);
+    const fullPath = (path ? path+'/' : '') + f.name;
+    const safePath = fullPath.replace(/'/g,"\\'");
+    const nameEsc = f.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="file-item" data-path="${safePath}" onclick="fileClick(event,'${safePath}',${f.is_dir})">
+      <span class="icon">${icon}</span>
+      <span class="name">${nameEsc}</span>
+      <span class="size">${sz}</span>
+      <span class="factions">
+        ${!f.is_dir ? '<button onclick="event.stopPropagation();previewFile(\''+safePath+'\')" title="Preview">👁</button>' : ''}
+        ${!f.is_dir ? '<button onclick="event.stopPropagation();downloadFile(\''+safePath+'\')" title="Download">💾</button>' : ''}
+        <button onclick="event.stopPropagation();renameItem('${safePath}','${f.name.replace(/'/g,"\\'")}')" title="Rename">✏️</button>
+        <button onclick="event.stopPropagation();deleteItem('${safePath}')" title="Delete" style="color:var(--red)">🗑</button>
+      </span>
+    </div>`;
+  }).join('') || '<span style="color:var(--text-dim);font-size:.8rem;padding:8px">Empty folder</span>';
+}
+
+function getFileIcon(f) {
+  if (f.is_dir) return '📁';
+  const ext = f.name.split('.').pop().toLowerCase();
+  const iconMap = {
+    png:'🖼️',jpg:'🖼️',jpeg:'🖼️',gif:'🖼️',webp:'🖼️',svg:'🖼️',bmp:'🖼️',
+    mp3:'🎵',wav:'🎵',ogg:'🎵',flac:'🎵',
+    mp4:'🎬',avi:'🎬',mkv:'🎬',mov:'🎬',
+    pdf:'📕',doc:'📄',docx:'📄',xls:'📊',xlsx:'📊',
+    py:'🐍',js:'📜',html:'🌐',css:'🎨',json:'📋',
+    zip:'📦',rar:'📦',tar:'📦',gz:'📦',
+    exe:'⚙️',msi:'⚙️',bat:'⚙️',
+    txt:'📝',md:'📝',log:'📝',csv:'📝',
+  };
+  return iconMap[ext] || '📄';
+}
+
+function fileClick(event, path, isDir) {
+  if (isDir) { browseDir(path); return; }
+  // Select file
+  document.querySelectorAll('.file-item.selected').forEach(el => el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  _selectedFile = path;
+  el('deleteBtn').style.display = '';
+}
+
+function filterFiles() {
+  const q = (el('fileFilter').value || '').toLowerCase();
+  if (!q) { renderFileList(_allFiles); return; }
+  renderFileList(_allFiles.filter(f => f.name.toLowerCase().includes(q)));
+}
+
+function browseUp() { const parts=currentPath.split('/').filter(Boolean); parts.pop(); browseDir(parts.join('/')); }
+
+function downloadFile(path) {
+  apiRaw('/api/files/download?path='+encodeURIComponent(path)).then(r=>{
+    if(!r.ok) throw new Error('Download failed');
+    return r.blob();
+  }).then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = path.split('/').pop(); a.click();
+    URL.revokeObjectURL(url);
+  }).catch(e => toast('Download failed'));
+}
+
+function uploadFiles() {
+  const input = el('uploadFileInput');
+  const files = input.files;
+  if (!files.length) return;
+  _doUpload(Array.from(files));
+  input.value = '';
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  el('dropZone').classList.remove('active');
+  const files = Array.from(event.dataTransfer.files);
+  if (files.length) _doUpload(files);
+}
+
+function _doUpload(files) {
+  const total = files.length;
+  let done = 0;
+  el('uploadProgress').style.display = '';
+  el('uploadLabel').textContent = `Uploading 0/${total}…`;
+  el('uploadBar').style.width = '0%';
+
+  const form = new FormData();
+  files.forEach(f => form.append('files', f));
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', BASE+'/api/files/upload?dest='+encodeURIComponent(currentPath||'uploads'));
+  xhr.setRequestHeader('Authorization', 'Bearer '+TOKEN);
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round(e.loaded/e.total*100);
+      el('uploadBar').style.width = pct+'%';
+      el('uploadLabel').textContent = `Uploading ${pct}%…`;
+    }
+  };
+  xhr.onload = () => {
+    el('uploadProgress').style.display = 'none';
+    if (xhr.status === 200) {
+      const d = JSON.parse(xhr.responseText);
+      const uploaded = (d.files||[]).filter(f => !f.error).length;
+      const errors = (d.files||[]).filter(f => f.error);
+      toast(`Uploaded ${uploaded} file(s)` + (errors.length ? `, ${errors.length} failed` : ''));
+      browseDir(currentPath);
+    } else {
+      toast('Upload failed: ' + xhr.statusText);
+    }
+  };
+  xhr.onerror = () => { el('uploadProgress').style.display = 'none'; toast('Upload failed'); };
+  xhr.send(form);
+}
+
+function deleteItem(path) {
+  const name = path.split('/').pop();
+  if (!confirm('Delete "'+name+'"?')) return;
+  api('/api/files/delete',{method:'POST',body:JSON.stringify({path})}).then(d => {
+    if (d.ok) { toast('Deleted: '+name); browseDir(currentPath); }
+    else toast(d.error || 'Delete failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+function deleteSelected() {
+  if (_selectedFile) deleteItem(_selectedFile);
+}
+
+function renameItem(path, oldName) {
+  const newName = prompt('Rename "'+oldName+'" to:', oldName);
+  if (!newName || newName === oldName) return;
+  api('/api/files/rename',{method:'POST',body:JSON.stringify({path, new_name:newName})}).then(d => {
+    if (d.ok) { toast('Renamed to: '+newName); browseDir(currentPath); }
+    else toast(d.error || 'Rename failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+function promptNewFolder() {
+  const name = prompt('New folder name:');
+  if (!name) return;
+  const path = (currentPath ? currentPath+'/' : '') + name;
+  api('/api/files/mkdir',{method:'POST',body:JSON.stringify({path})}).then(d => {
+    if (d.ok) { toast('Created: '+name); browseDir(currentPath); }
+    else toast(d.error || 'Failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  FILE PREVIEW
+// ═════════════════════════════════════════════════
+function previewFile(path) {
+  _previewPath = path;
+  const name = path.split('/').pop();
+  el('previewName').textContent = name;
+  el('previewBody').innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:40px">Loading…</div>';
+  el('previewModal').classList.add('show');
+
+  api('/api/files/info?path='+encodeURIComponent(path)).then(info => {
+    el('previewSize').textContent = formatSize(info.size) + ' · ' + (info.modified||'').substring(0,10);
+    if (info.is_image) {
+      apiRaw('/api/files/download?path='+encodeURIComponent(path)).then(r=>r.blob()).then(blob => {
+        const url = URL.createObjectURL(blob);
+        el('previewBody').innerHTML = `<img src="${url}" alt="${name}">`;
+      });
+    } else if (info.is_text) {
+      apiRaw('/api/files/download?path='+encodeURIComponent(path)).then(r=>r.text()).then(text => {
+        const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        el('previewBody').innerHTML = `<pre>${escaped}</pre>`;
+      });
+    } else if (info.suffix === '.pdf') {
+      apiRaw('/api/files/download?path='+encodeURIComponent(path)).then(r=>r.blob()).then(blob => {
+        const url = URL.createObjectURL(blob);
+        el('previewBody').innerHTML = `<iframe src="${url}" style="width:100%;height:60vh;border:none;border-radius:6px"></iframe>`;
+      });
+    } else if (['.mp3','.wav','.ogg','.flac'].includes(info.suffix)) {
+      apiRaw('/api/files/download?path='+encodeURIComponent(path)).then(r=>r.blob()).then(blob => {
+        const url = URL.createObjectURL(blob);
+        el('previewBody').innerHTML = `<audio controls src="${url}" style="width:100%"></audio>`;
+      });
+    } else if (['.mp4','.webm','.mov'].includes(info.suffix)) {
+      apiRaw('/api/files/download?path='+encodeURIComponent(path)).then(r=>r.blob()).then(blob => {
+        const url = URL.createObjectURL(blob);
+        el('previewBody').innerHTML = `<video controls src="${url}" style="width:100%;max-height:60vh;border-radius:6px"></video>`;
+      });
+    } else {
+      el('previewBody').innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:40px">
+        <div style="font-size:2rem;margin-bottom:8px">📄</div>
+        <div>${name} (${formatSize(info.size)})</div>
+        <div style="font-size:.8rem;margin-top:8px">No preview available</div>
+        <button class="btn btn-teal" onclick="downloadFile('${path.replace(/'/g,"\\'")}')" style="margin-top:12px">💾 Download</button>
+      </div>`;
+    }
+  }).catch(() => {
+    el('previewBody').innerHTML = '<div style="text-align:center;color:var(--red)">Failed to load file info</div>';
+  });
+}
+
+function closePreview() { el('previewModal').classList.remove('show'); }
+function downloadPreviewFile() { if (_previewPath) downloadFile(_previewPath); }
+
+function formatSize(b) { if(b<1024)return b+'B'; if(b<1048576)return (b/1024).toFixed(1)+'K'; return (b/1048576).toFixed(1)+'M'; }
+
+// ═════════════════════════════════════════════════
+//  MONITORS
+// ═════════════════════════════════════════════════
+function loadMonitors() {
+  api('/api/monitors').then(d => {
+    const sel = el('scrMonitor');
+    (d.monitors||[]).forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.index; opt.textContent = m.name + ' ('+m.width+'×'+m.height+')';
+      sel.appendChild(opt);
+    });
+  }).catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  SCREEN SHARING
+// ═════════════════════════════════════════════════
+let _lastClickTime = 0;
+let _isDragging = false;
+let screenUseWebp = false;
+
+function toggleScreen() {
+  if (screenConnected) { disconnectScreen(); return; }
+  const proto = location.protocol==='https:'?'wss:':'ws:';
+  screenWs = new WebSocket(proto+'//'+location.host+'/ws/screen');
+  screenWs.binaryType = 'arraybuffer';
+  const canvas = el('screenCanvas'), ctx = canvas.getContext('2d');
+  screenWs.onopen = () => { screenWs.send(TOKEN); screenConnected=true; el('screenConnBtn').textContent='⏹ Disconnect'; el('screenFpsLabel').textContent='Connecting…'; };
+  let frameCount = 0, lastFpsTime = Date.now();
+  screenWs.onmessage = (e) => {
+    if (typeof e.data === 'string') {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'pong') { pingMs = Math.round(performance.now() - msg.ts);
+          const label = el('pingLabel'); label.textContent = pingMs+'ms';
+          label.className = 'ping '+(pingMs<50?'good':pingMs<150?'ok':'bad'); }
+        if (msg.type === 'timeout') { toast('Session timed out'); disconnectScreen(); }
+      } catch(ex){}
+      return;
+    }
+    if (e.data instanceof ArrayBuffer) {
+      const blob = new Blob([e.data], {type: screenUseWebp ? 'image/webp' : 'image/jpeg'});
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = img.width; canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        frameCount++;
+        const now = Date.now();
+        if (now - lastFpsTime > 1000) { el('screenFpsLabel').textContent = frameCount + ' FPS'; frameCount=0; lastFpsTime=now; }
+      };
+      img.src = url;
+    }
+  };
+  screenWs.onclose = () => disconnectScreen();
+  screenWs.onerror = () => disconnectScreen();
+
+  // Ping via WebSocket
+  setInterval(() => {
+    if (screenWs && screenConnected) screenWs.send(JSON.stringify({type:'ping', ts:performance.now()}));
+  }, 5000);
+
+  function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+    return { x: Math.round((e.clientX - rect.left) * scaleX), y: Math.round((e.clientY - rect.top) * scaleY) };
+  }
+
+  // Double-click detection + drag support
+  canvas.onmousedown = (e) => {
+    if (!screenConnected || !screenWs) return;
+    const {x, y} = getCanvasCoords(e);
+    const now = Date.now();
+    const btn = e.button === 2 ? 'right' : 'left';
+    if (now - _lastClickTime < 300 && btn === 'left') {
+      // Double click — send click twice fast
+      screenWs.send(JSON.stringify({type:'mouse_click', x, y, button:btn}));
+      screenWs.send(JSON.stringify({type:'mouse_click', x, y, button:btn}));
+      _lastClickTime = 0;
+    } else {
+      _lastClickTime = now;
+      _isDragging = true;
+      screenWs.send(JSON.stringify({type:'mouse_down', x, y, button:btn}));
+    }
+  };
+  canvas.onmouseup = (e) => {
+    if (!screenConnected || !screenWs || !_isDragging) return;
+    const {x, y} = getCanvasCoords(e);
+    _isDragging = false;
+    screenWs.send(JSON.stringify({type:'mouse_up', x, y, button: e.button===2?'right':'left'}));
+  };
+  canvas.oncontextmenu = (e) => e.preventDefault();
+  canvas.onwheel = (e) => {
+    if (!screenConnected || !screenWs) return;
+    screenWs.send(JSON.stringify({type:'mouse_scroll', delta: -Math.sign(e.deltaY)*120}));
+    e.preventDefault();
+  };
+  canvas.onmousemove = (e) => {
+    if (!screenConnected || !screenWs || !_isDragging) return;
+    const {x, y} = getCanvasCoords(e);
+    screenWs.send(JSON.stringify({type:'mouse_move', x, y}));
+  };
+
+  // Touch support (mobile)
+  canvas.addEventListener('touchstart', (e) => {
+    if (!screenConnected || !screenWs || !e.touches.length) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const {x, y} = getCanvasCoords(touch);
+    screenWs.send(JSON.stringify({type:'mouse_click', x, y, button:'left'}));
+  }, {passive:false});
+  canvas.addEventListener('touchmove', (e) => {
+    if (!screenConnected || !screenWs || !e.touches.length) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const {x, y} = getCanvasCoords(touch);
+    screenWs.send(JSON.stringify({type:'mouse_move', x, y}));
+  }, {passive:false});
+
+  // Keyboard capture when canvas is focused
+  canvas.setAttribute('tabindex','0');
+  canvas.addEventListener('keydown', (e) => {
+    if (!screenConnected || !screenWs) return;
+    e.preventDefault();
+    const key = e.key;
+    const MAP = {Enter:'enter',Tab:'tab',Escape:'escape',Backspace:'backspace',Delete:'delete',
+      ' ':'space',ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',
+      Home:'home',End:'end',PageUp:'pageup',PageDown:'pagedown',
+      F1:'f1',F2:'f2',F3:'f3',F4:'f4',F5:'f5',F11:'f11',F12:'f12'};
+    const mapped = MAP[key];
+    if (mapped) {
+      const combo = [];
+      if (e.ctrlKey) combo.push('ctrl');
+      if (e.altKey) combo.push('alt');
+      if (e.shiftKey) combo.push('shift');
+      if (combo.length > 0) { combo.push(mapped); screenWs.send(JSON.stringify({type:'key_combo',keys:combo})); }
+      else screenWs.send(JSON.stringify({type:'key_press',key:mapped,action:'press'}));
+    } else if (key.length === 1 && !e.ctrlKey && !e.altKey) {
+      screenWs.send(JSON.stringify({type:'key_type',text:key}));
+    } else if (key.length === 1 && (e.ctrlKey || e.altKey)) {
+      const combo = [];
+      if (e.ctrlKey) combo.push('ctrl');
+      if (e.altKey) combo.push('alt');
+      if (e.shiftKey) combo.push('shift');
+      combo.push(key.toLowerCase());
+      screenWs.send(JSON.stringify({type:'key_combo',keys:combo}));
+    }
+  });
+  sendScreenSettings();
+}
+function disconnectScreen() {
+  screenConnected = false;
+  if (screenWs) { try{screenWs.close()}catch(e){} screenWs=null; }
+  el('screenConnBtn').textContent = '▶ Connect';
+  el('screenFpsLabel').textContent = 'Disconnected';
+}
+function sendScreenSettings() {
+  const q=+el('scrQuality').value, s=+el('scrScale').value, f=+el('scrFps').value;
+  const mon=+el('scrMonitor').value, cur=el('scrCursor').checked, webp=el('scrWebp').checked;
+  screenUseWebp = webp;
+  el('scrScaleVal').textContent = s+'%'; el('scrFpsVal').textContent = f;
+  if (screenWs && screenConnected) {
+    screenWs.send(JSON.stringify({type:'settings', quality:q, scale:s/100, fps:f, monitor:mon, cursor:cur, webp}));
+  }
+}
+function toggleFullscreen() {
+  const wrap = el('screenWrap');
+  wrap.classList.toggle('fullscreen');
+  if (wrap.classList.contains('fullscreen')) {
+    document.addEventListener('keydown', _exitFullscreenKey);
+  } else {
+    document.removeEventListener('keydown', _exitFullscreenKey);
+  }
+}
+function _exitFullscreenKey(e) { if (e.key === 'Escape') { el('screenWrap').classList.remove('fullscreen'); document.removeEventListener('keydown', _exitFullscreenKey); e.stopPropagation(); } }
+function scrKey(k) { if(screenWs&&screenConnected) screenWs.send(JSON.stringify({type:'key_press',key:k,action:'press'})); }
+function scrCombo(keys) { if(screenWs&&screenConnected) screenWs.send(JSON.stringify({type:'key_combo',keys})); }
+function scrType() { const t=el('scrTypeInp').value; if(!t||!screenWs||!screenConnected)return; screenWs.send(JSON.stringify({type:'key_type',text:t})); el('scrTypeInp').value=''; }
+
+// ═════════════════════════════════════════════════
+//  CLIPBOARD
+// ═════════════════════════════════════════════════
+function getClip() { api('/api/clipboard').then(d=>{el('clipInp').value=d.text;toast('Clipboard loaded')}).catch(e=>toast('Error: '+e.message)); }
+function setClip() { const t=el('clipInp').value; api('/api/clipboard',{method:'POST',body:JSON.stringify({text:t})}).then(()=>toast('Clipboard set')).catch(e=>toast('Error: '+e.message)); }
+
+// ═════════════════════════════════════════════════
+//  VOLUME CONTROL
+// ═════════════════════════════════════════════════
+function refreshVolume() {
+  api('/api/volume').then(d => {
+    if (d.volume >= 0) {
+      el('volSlider').value = d.volume;
+      el('volVal').textContent = d.volume + '%';
+      el('muteBtn').textContent = d.muted ? '🔈' : '🔇';
+      el('volStatus').textContent = d.muted ? 'Muted' : '';
+    } else {
+      el('volStatus').textContent = d.error || 'Unavailable';
+    }
+  }).catch(() => {});
+}
+function setVolume(level) {
+  api('/api/volume', {method:'POST',body:JSON.stringify({level})}).then(d => {
+    if (d.ok) { el('volVal').textContent = level+'%'; }
+    else toast(d.error || 'Failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+function toggleMute() {
+  api('/api/volume/mute', {method:'POST'}).then(d => {
+    if (d.ok !== undefined) {
+      el('muteBtn').textContent = d.muted ? '🔈' : '🔇';
+      el('volStatus').textContent = d.muted ? 'Muted' : '';
+    }
+  }).catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  MEDIA KEYS
+// ═════════════════════════════════════════════════
+function mediaKey(action) {
+  api('/api/media', {method:'POST',body:JSON.stringify({action})}).then(d => {
+    if (!d.ok) toast(d.error || 'Failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  BRIGHTNESS
+// ═════════════════════════════════════════════════
+function refreshBrightness() {
+  api('/api/brightness').then(d => {
+    if (d.brightness >= 0) {
+      el('brightSlider').value = d.brightness;
+      el('brightVal').textContent = d.brightness + '%';
+      el('brightStatus').textContent = '';
+    } else {
+      el('brightStatus').textContent = d.error || 'Not supported';
+    }
+  }).catch(() => {});
+}
+function setBrightness(level) {
+  api('/api/brightness', {method:'POST',body:JSON.stringify({level})}).then(d => {
+    if (d.ok) el('brightVal').textContent = level + '%';
+    else el('brightStatus').textContent = d.error || 'Failed';
+  }).catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  QUICK LAUNCH
+// ═════════════════════════════════════════════════
+function quickLaunch(appId) {
+  api('/api/launch', {method:'POST',body:JSON.stringify({app_id:appId})}).then(d => {
+    if (d.ok) toast('Launched: ' + appId);
+    else toast(d.error || 'Failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  POWER MANAGEMENT
+// ═════════════════════════════════════════════════
+function powerAction(action) {
+  const dangerous = ['shutdown','restart','sleep'];
+  if (dangerous.includes(action)) {
+    const msgs = {shutdown:'⏻ Shutdown PC in 30 seconds?',restart:'🔄 Restart PC in 30 seconds?',sleep:'😴 Put PC to sleep?'};
+    if (!confirm(msgs[action])) return;
+  }
+  api('/api/power', {method:'POST',body:JSON.stringify({action})}).then(d => {
+    if (d.ok) { toast('Power: ' + action + (d.delay ? ' in '+d.delay+'s' : '')); }
+    else toast(d.error || 'Failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  NETWORK INFO
+// ═════════════════════════════════════════════════
+function refreshNetwork() {
+  api('/api/network').then(d => {
+    let html = '';
+    if (d.wifi_name) html += '<div>📶 WiFi: <strong>' + d.wifi_name + '</strong></div>';
+    (d.interfaces||[]).forEach(iface => {
+      html += '<div>🌐 ' + iface.name + ': <strong>' + iface.ip + '</strong></div>';
+    });
+    el('netInfo').innerHTML = html || '<span style="color:var(--text-dim)">No network info</span>';
+  }).catch(() => { el('netInfo').textContent = 'Error loading'; });
+}
+
+// ═════════════════════════════════════════════════
+//  RUNNING PROCESSES
+// ═════════════════════════════════════════════════
+function refreshProcesses() {
+  const sort = el('procSort') ? el('procSort').value : 'cpu';
+  api('/api/processes?sort='+sort).then(d => {
+    el('procList').innerHTML = (d.processes||[]).map(p =>
+      `<div class="proc-row">
+        <span class="pname" title="PID: ${p.pid}">${p.name}</span>
+        <span class="pval">${p.cpu.toFixed(1)}%</span>
+        <span class="pval">${p.mem_mb.toFixed(0)}M</span>
+        <button class="pkill" title="Kill" onclick="killProc(${p.pid},'${p.name.replace(/'/g,"\\'")}')">✕</button>
+      </div>`
+    ).join('') || '<span style="color:var(--text-dim)">No processes</span>';
+  }).catch(() => { el('procList').textContent = 'Error loading'; });
+}
+function killProc(pid, name) {
+  if (!confirm('Kill ' + name + ' (PID: ' + pid + ')?')) return;
+  api('/api/processes/kill', {method:'POST',body:JSON.stringify({pid})}).then(d => {
+    if (d.ok) { toast('Killed: '+d.name); refreshProcesses(); }
+    else toast(d.error || 'Failed');
+  }).catch(e => toast('Error: '+e.message));
+}
+
+// ═════════════════════════════════════════════════
+//  PWA INSTALL
+// ═════════════════════════════════════════════════
+let _deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstall = e;
+  el('installBanner').style.display = 'block';
+});
+function installPWA() {
+  if (!_deferredInstall) { toast('Install not available — open in Chrome/Edge'); return; }
+  _deferredInstall.prompt();
+  _deferredInstall.userChoice.then(r => {
+    if (r.outcome === 'accepted') toast('App installed!');
+    el('installBanner').style.display = 'none';
+    _deferredInstall = null;
+  });
+}
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ═════════════════════════════════════════════════
+//  TOAST
+// ═════════════════════════════════════════════════
+function toast(msg) { const e=el('toast'); e.textContent=msg; e.classList.add('show'); clearTimeout(e._t); e._t=setTimeout(()=>e.classList.remove('show'),3000); }
+</script>
+</body>
+</html>

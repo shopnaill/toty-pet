@@ -1,0 +1,9 @@
+{
+  "enabled": false,
+  "mode": "time",
+  "interval_min": 30,
+  "folders": {},
+  "single_folder": "",
+  "shuffle": true,
+  "_index": 0
+}

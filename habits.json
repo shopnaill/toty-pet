@@ -1,0 +1,25 @@
+{
+  "habits": {
+    "habits": {
+      "goal": 1,
+      "icon": "✅",
+      "created": "2026-03-10"
+    },
+    "log": {
+      "goal": 1,
+      "icon": "✅",
+      "created": "2026-03-10"
+    },
+    "coding": {
+      "goal": 1,
+      "icon": "✅",
+      "created": "2026-03-10"
+    }
+  },
+  "log": {
+    "2026-03-10": {
+      "habits": 1,
+      "log": 2
+    }
+  }
+}

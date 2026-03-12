@@ -1,24 +1,24 @@
 {
     "visits": {
         "youtube": {
-            "count": 8,
-            "total_sec": 43.99196767807007,
-            "last_seen": 1772902269.7730794
+            "count": 22,
+            "total_sec": 117.85705876350403,
+            "last_seen": 1773326659.4464571
         },
         "google": {
-            "count": 104,
-            "total_sec": 1554.959599494934,
-            "last_seen": 1772990542.950558
+            "count": 220,
+            "total_sec": 3754.3878784179688,
+            "last_seen": 1773331303.9040604
         },
         "telegram": {
-            "count": 6,
-            "total_sec": 13.994683504104614,
-            "last_seen": 1772829228.9925735
+            "count": 7,
+            "total_sec": 15.990786075592041,
+            "last_seen": 1773106732.041767
         },
         "whatsapp": {
-            "count": 8,
-            "total_sec": 63.99076557159424,
-            "last_seen": 1772898022.5305662
+            "count": 13,
+            "total_sec": 122.09621977806091,
+            "last_seen": 1773242288.18844
         }
     },
     "daily": {
@@ -38,7 +38,26 @@
             "whatsapp": 1
         },
         "2026-03-08": {
-            "google": 8
+            "google": 21,
+            "whatsapp": 3
+        },
+        "2026-03-09": {
+            "google": 34,
+            "youtube": 7
+        },
+        "2026-03-10": {
+            "google": 44,
+            "telegram": 1,
+            "whatsapp": 1,
+            "youtube": 4
+        },
+        "2026-03-11": {
+            "google": 20,
+            "whatsapp": 1
+        },
+        "2026-03-12": {
+            "google": 5,
+            "youtube": 3
         }
     },
     "last_site": "",

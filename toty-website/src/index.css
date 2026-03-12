@@ -1,0 +1,234 @@
+/* ── Reset & Base ───────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-deep: #070B09;
+  --bg-dark: #0D1411;
+  --bg-card: #131C17;
+  --bg-card-hover: #192520;
+  --surface: #1E2B23;
+  --border: rgba(74, 222, 128, 0.1);
+  --border-hover: rgba(74, 222, 128, 0.25);
+  --teal: #4ADE80;
+  --teal-dim: rgba(74, 222, 128, 0.15);
+  --teal-glow: rgba(74, 222, 128, 0.4);
+  --purple: #FBBF24;
+  --purple-dim: rgba(251, 191, 36, 0.15);
+  --pink: #FCA5A5;
+  --pink-dim: rgba(252, 165, 165, 0.15);
+  --blue: #34D399;
+  --blue-dim: rgba(52, 211, 153, 0.15);
+  --peach: #FB923C;
+  --peach-dim: rgba(251, 146, 60, 0.15);
+  --green: #86EFAC;
+  --green-dim: rgba(134, 239, 172, 0.15);
+  --yellow: #FDE68A;
+  --yellow-dim: rgba(253, 230, 138, 0.15);
+  --red: #F87171;
+  --red-dim: rgba(248, 113, 113, 0.15);
+  --text: #D1D5DB;
+  --text-dim: #6B7280;
+  --text-bright: #FFFFFF;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-ar: 'Noto Kufi Arabic', 'Inter', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg-deep);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--teal);
+  color: var(--bg-deep);
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--teal-dim); }
+
+/* ── Utility ───────────────────────────────────────────── */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section {
+  padding: 120px 0;
+  position: relative;
+}
+
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--teal);
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+.section-title {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text-bright);
+  margin-bottom: 20px;
+}
+
+.section-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-dim);
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--teal), var(--blue), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glow Effects ──────────────────────────────────────── */
+.glow-teal {
+  box-shadow: 0 0 40px rgba(74, 222, 128, 0.15),
+              0 0 80px rgba(74, 222, 128, 0.05);
+}
+
+.glow-purple {
+  box-shadow: 0 0 40px rgba(251, 191, 36, 0.15),
+              0 0 80px rgba(251, 191, 36, 0.05);
+}
+
+/* ── Animations ────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.float-animation {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* ── Background Decorations ────────────────────────────── */
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(74, 222, 128, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 222, 128, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+.bg-radial {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .section { padding: 80px 0; }
+  .container { padding: 0 16px; }
+}
+
+/* ── RTL / Arabic Support ──────────────────────────────── */
+html[dir="rtl"] {
+  font-family: var(--font-ar);
+}
+
+html[dir="rtl"] body {
+  font-family: var(--font-ar);
+}
+
+html[dir="rtl"] .section-label,
+html[dir="rtl"] .section-title,
+html[dir="rtl"] .section-subtitle,
+html[dir="rtl"] .feature-title,
+html[dir="rtl"] .feature-desc,
+html[dir="rtl"] .stat-label,
+html[dir="rtl"] .fg-name {
+  font-family: var(--font-ar);
+}
+
+html[dir="rtl"] .hero-title {
+  letter-spacing: 0;
+}
+
+/* Bubble tail flips in RTL */
+html[dir="rtl"] .bubble-tail {
+  left: auto;
+  right: 16px;
+}
+
+/* Chat bubble corners flip for RTL */
+html[dir="rtl"] .chat-msg.user .msg-bubble {
+  border-bottom-right-radius: 14px;
+  border-bottom-left-radius: 4px;
+}
+
+html[dir="rtl"] .chat-msg.bot .msg-bubble {
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 4px;
+}
+
+/* Overlay badge position flips */
+html[dir="rtl"] .demo-overlay-badge {
+  left: auto;
+  right: 12px;
+}
+
+/* Code block stays LTR */
+html[dir="rtl"] .install-cmd {
+  direction: ltr;
+  text-align: left;
+}
+
+html[dir="rtl"] .cmd-prompt {
+  margin-right: 0;
+  margin-left: 8px;
+}
+
+/* Bar percentage labels */
+html[dir="rtl"] .bar-value {
+  text-align: left;
+}

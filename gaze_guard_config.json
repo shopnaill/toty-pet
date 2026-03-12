@@ -1,0 +1,72 @@
+{
+  "enabled": true,
+  "strictness": "medium",
+  "custom_blocked": [],
+  "custom_allowed": [],
+  "screen_guard_enabled": false,
+  "screen_guard_interval_sec": 1,
+  "safe_search_enforced": true,
+  "blur_hotkey_enabled": true,
+  "auto_close_tab": true,
+  "show_overlay": true,
+  "blur_target": "women",
+  "blur_intensity": 100,
+  "detection_strictness": "medium",
+  "targeted_blur": true,
+  "hover_to_reveal": false,
+  "blur_mode": "blur",
+  "solid_color": "#808080",
+  "body_coverage": "face_body",
+  "adaptive_blur": true,
+  "edge_feathering": true,
+  "adaptive_interval": true,
+  "multi_monitor": true,
+  "whitelist_rects": [],
+  "toast_on_detect": true,
+  "skin_tone_tint": false,
+  "session_faces_detected": 0,
+  "session_start_time": "",
+  "total_faces_detected": 3196,
+  "total_screen_time_sec": 0,
+  "daily_stats": {
+    "2026-03-09": {
+      "blocks": 1158,
+      "faces": 2817
+    },
+    "2026-03-10": {
+      "blocks": 0,
+      "faces": 30
+    },
+    "2026-03-11": {
+      "blocks": 89,
+      "faces": 349
+    }
+  },
+  "streak_current": 1,
+  "streak_longest": 2,
+  "streak_start_date": "2026-03-11",
+  "last_clean_date": "2026-03-12",
+  "total_blocks": 1388,
+  "incidents": [
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11",
+    "2026-03-11"
+  ]
+}

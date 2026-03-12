@@ -1,0 +1,18 @@
+{
+  "coins": 70,
+  "owned": [
+    "sunglasses",
+    "beanie",
+    "glasses",
+    "coffee_mug"
+  ],
+  "equipped": {
+    "face": "sunglasses",
+    "hand": "coffee_mug",
+    "head": "beanie"
+  },
+  "outfit_presets": {},
+  "last_daily_spin": "2026-03-12",
+  "total_earned": 100,
+  "total_spent": 30
+}

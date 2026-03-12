@@ -1,0 +1,92 @@
+.usecases-section {
+  overflow: hidden;
+}
+
+.usecases-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.usecases-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.usecase-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  transition: all 0.3s;
+}
+
+.usecase-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-card-hover);
+}
+
+.usecase-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+}
+
+.usecase-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 10px;
+}
+
+.usecase-desc {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.usecase-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.usecase-features li {
+  font-size: 0.82rem;
+  color: var(--text);
+  padding-left: 16px;
+  position: relative;
+}
+
+.usecase-features li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--teal);
+  font-size: 0.8rem;
+}
+
+html[dir="rtl"] .usecase-features li {
+  padding-left: 0;
+  padding-right: 16px;
+}
+
+html[dir="rtl"] .usecase-features li::before {
+  left: auto;
+  right: 0;
+  content: '←';
+}
+
+@media (max-width: 1024px) {
+  .usecases-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .usecases-grid { grid-template-columns: 1fr; }
+  .usecase-card { padding: 24px 20px; }
+}

@@ -73,5 +73,10 @@
     "eye_break_min": 20,
     "enable_weather": true,
     "enable_voice_commands": true,
-    "prayer_timezone": 2
+    "enable_clipboard_search": true,
+    "prayer_iqama_min": 15,
+    "prayer_timezone": 2,
+    "prayer_desktop_widget": true,
+    "enable_tts": true,
+    "open_widgets": []
 }

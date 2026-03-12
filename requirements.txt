@@ -1,0 +1,11 @@
+# Toty Desktop Pet — Python dependencies
+PyQt6>=6.7
+pynput>=1.7
+pygetwindow>=0.0.9
+psutil>=5.9
+Pillow>=10.0
+sounddevice>=0.4
+numpy>=1.24
+qrcode>=7.4
+pystray>=0.19
+SpeechRecognition>=3.10

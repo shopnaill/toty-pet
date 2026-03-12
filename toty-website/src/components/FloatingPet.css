@@ -1,0 +1,42 @@
+.floating-pet {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 80;
+  cursor: pointer;
+  user-select: none;
+}
+.floating-pet img {
+  width: 56px;
+  height: 56px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.4));
+  transition: filter 0.2s;
+}
+.floating-pet:hover img {
+  filter: drop-shadow(0 0 16px rgba(74, 222, 128, 0.7));
+}
+
+.floating-pet-bubble {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-bright);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+html[dir="rtl"] .floating-pet {
+  right: auto;
+  left: 24px;
+}
+html[dir="rtl"] .floating-pet-bubble {
+  right: auto;
+  left: 0;
+}

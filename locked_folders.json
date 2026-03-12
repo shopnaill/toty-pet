@@ -1,9 +1,14 @@
 {
   "folders": [
     {
-      "path": "C:\\Users\\Mohammad\\OneDrive\\Desktop\\GMT",
-      "hash": "b20331340cc306d1efe45fa11b96a8eb1ea3ec9e326c14a2080e837f356808d5",
-      "locked": false
+      "path": "C:\\Users\\Mohammad\\OneDrive\\Desktop",
+      "original_name": "GMT",
+      "obfuscated_name": ".toty_82fd2edc27ef",
+      "hash": "52c23bfa8dc32ab9079e5b8a1d9e32f7d388b4e786938dd9485aa582135b296d",
+      "salt": "8e0243dd5a654b77",
+      "locked": true,
+      "failed_attempts": 0,
+      "lockout_until": 0
     }
   ]
 }

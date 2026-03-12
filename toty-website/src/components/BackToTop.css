@@ -1,0 +1,26 @@
+.back-to-top {
+  position: fixed;
+  bottom: 32px;
+  left: 32px;
+  z-index: 90;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--teal);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: background 0.2s, border-color 0.2s;
+}
+.back-to-top:hover {
+  background: var(--teal-dim);
+  border-color: var(--teal);
+}
+
+html[dir="rtl"] .back-to-top {
+  left: auto;
+  right: 32px;
+}

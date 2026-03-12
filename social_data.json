@@ -1,16 +1,14 @@
 {
   "today_challenges": [
     "type_500",
-    "type_2000",
-    "type_5000"
+    "pomodoro_2",
+    "focus_120"
   ],
   "completed_today": [
-    "type_500",
-    "type_2000",
-    "type_5000"
+    "type_500"
   ],
-  "challenge_date": "2026-03-08",
-  "total_challenges_done": 5,
+  "challenge_date": "2026-03-12",
+  "total_challenges_done": 9,
   "evolution_announced": [
     1,
     5,

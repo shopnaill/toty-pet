@@ -1,0 +1,66 @@
+{
+  "name": "Sunset Blaze",
+  "author": "Toty",
+  "description": "A warm fiery sunset pet with orange-red tones",
+
+  "body": {
+    "color": "#FF7043",
+    "width": 60,
+    "height": 60,
+    "shading_steps": 40,
+    "specular_alpha": 85,
+    "rim_light": true
+  },
+
+  "limbs": {
+    "color": "#3E2723",
+    "highlight_alpha": 170,
+    "arm_w": 14,
+    "arm_h": 16,
+    "leg_w": 16,
+    "leg_h": 18
+  },
+
+  "face": {
+    "eye_color": "#1A1A1A",
+    "eye_w": 7,
+    "eye_h": 12,
+    "eye_spacing": 18,
+    "mouth_width": 16,
+    "blush_color": "#FFAB91",
+    "blush_alpha": 180,
+    "blush_size": 8
+  },
+
+  "effects": {
+    "shadow_alpha": 35,
+    "shadow_ao_alpha": 80,
+    "glow_alpha": 130,
+    "glow_blur": 8
+  },
+
+  "state_colors": {
+    "idle":          { "body": "#FF7043" },
+    "walk":          { "body": "#FF7043" },
+    "run":           { "body": "#FF7043" },
+    "crawl":         { "body": "#FF7043" },
+    "carry":         { "body": "#FF7043" },
+    "work":          { "body": "#E64A19" },
+    "happy":         { "body": "#FFB74D", "glow": "#FFF3E0" },
+    "dance":         { "body": "#FF9800", "glow": "#FFE0B2" },
+    "excited":       { "body": "#FF5722" },
+    "sad":           { "body": "#795548" },
+    "sleep":         { "body": "#BF360C" },
+    "pray":          { "body": "#E65100", "glow": "#FFE0B2" },
+    "music":         { "body": "#AB47BC" },
+    "screenshot":    { "body": "#FFA726", "glow": "#FFF3E0" },
+    "notification":  { "body": "#FFCA28", "glow": "#FFF9C4" },
+    "level_up":      { "body": "#FFD600", "glow": "#FFF9C4" },
+    "startup":       { "body": "#FF8A65", "glow": "#FFCCBC" },
+    "shutdown":      { "body": "#795548" },
+    "restart":       { "body": "#42A5F5", "glow": "#BBDEFB" },
+    "run_app":       { "body": "#7E57C2", "glow": "#D1C4E9" },
+    "yawn":          { "body": "#FF7043" },
+    "stretch":       { "body": "#FF7043" }
+  }
+}

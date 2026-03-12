@@ -1,0 +1,72 @@
+.download-section {
+  overflow: hidden;
+  position: relative;
+}
+
+.dl-glow {
+  background: radial-gradient(circle, rgba(74,222,128,0.1), transparent 60%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 800px;
+}
+
+.dl-content {
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.dl-pet {
+  margin: 0 auto 32px;
+}
+
+.dl-buttons {
+  margin-bottom: 32px;
+}
+
+.btn-lg {
+  padding: 16px 40px;
+  font-size: 1.05rem;
+}
+
+.dl-reqs {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.dl-req {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.dl-install {
+  display: inline-block;
+}
+
+.install-cmd {
+  display: block;
+  padding: 14px 24px;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  text-align: left;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.cmd-prompt {
+  color: var(--teal);
+  margin-right: 8px;
+}
